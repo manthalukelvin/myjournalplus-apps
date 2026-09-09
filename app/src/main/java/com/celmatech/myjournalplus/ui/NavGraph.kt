@@ -106,13 +106,14 @@ fun NavGraph(
         composable(Screen.Home.route) {
             val context = LocalContext.current
             LaunchedEffect(user) {
-                if (user == null) {
+                val currentUser = user
+                if (currentUser == null) {
                     navController.navigate(Screen.Login.route) {
                         popUpTo(0) { inclusive = true }
                     }
                 } else {
                     try {
-                        DeviceRepository().registerOrTouch(context, user.uid)
+                        DeviceRepository().registerOrTouch(context, currentUser.uid)
                     } catch (_: Exception) { }
                     try {
                         val prefs = UserPrefs(context)
@@ -129,11 +130,11 @@ fun NavGraph(
                     try {
                         val deviceId = DeviceRepository().currentDeviceId(context)
                         val snap = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                            .collection("users").document(user.uid).get().await()
+                            .collection("users").document(currentUser.uid).get().await()
                         val forced = snap.get("forceLogoutDevices") as? List<*> ?: emptyList<Any>()
                         if (deviceId in forced.map { it.toString() }) {
                             com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                                .collection("users").document(user.uid)
+                                .collection("users").document(currentUser.uid)
                                 .update(
                                     "forceLogoutDevices",
                                     com.google.firebase.firestore.FieldValue.arrayRemove(deviceId)
