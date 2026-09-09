@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "288260274583",
+    "firebase_url": "https://myjournal-plus-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "myjournal-plus",
+    "storage_bucket": "myjournal-plus.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:288260274583:android:4589491a4227306a0e6cd2",
+        "android_client_info": {
+          "package_name": "com.celmatech.myjournalplus"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "288260274583-uee5b6u6u0pbvg503sos2s6l2sf0l4or.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDrOtZn9WBnezJRn79RS4ad7ZBpYEqcM1k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "288260274583-uee5b6u6u0pbvg503sos2s6l2sf0l4or.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
