@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <style name="Theme.MyJournalPlus" parent="android:Theme.Material.Light.NoActionBar">
-        <item name="android:statusBarColor">#7B6CFF</item>
-        <item name="android:navigationBarColor">#7B6CFF</item>
-        <item name="android:windowBackground">#F5F3FF</item>
-        <item name="android:colorPrimary">#7B6CFF</item>
-    </style>
-</resources>
