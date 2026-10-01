@@ -90,19 +90,3 @@ class ReminderReceiver : BroadcastReceiver() {
         }
     }
 }
-
-class BootReceiver : BroadcastReceiver() {
-    override fun onReceive(context: Context, intent: Intent?) {
-        if (intent?.action != Intent.ACTION_BOOT_COMPLETED) return
-        runBlocking {
-            val prefs = UserPrefs(context)
-            if (prefs.reminderEnabled.first()) {
-                ReminderScheduler.scheduleDaily(
-                    context,
-                    prefs.reminderHour.first(),
-                    prefs.reminderMinute.first()
-                )
-            }
-        }
-    }
-}
