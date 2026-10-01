@@ -20,7 +20,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // Gemini key is ONLY on your server (my24hrs.onrender.com) — never in the APK
-        buildConfigField("String", "AI_API_BASE_URL", "\"https://kelvin.onrender.com\"")
+        buildConfigField("String", "AI_API_BASE_URL", "\"https://kelvinmanthalu.onrender.com\"")
         buildConfigField("String", "ADMOB_BANNER_ID", "\"ca-app-pub-3124459433123264/3508994969\"")
         buildConfigField("String", "ADMOB_APP_ID", "\"ca-app-pub-3124459433123264~9313302636\"")
     }
