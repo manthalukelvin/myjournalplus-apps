@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Signed APK
 
 on:
   workflow_dispatch:
@@ -8,34 +8,56 @@ on:
 
 jobs:
   build:
+    name: Build Release APK
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
 
-      - name: Set up Java 17
+      - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
+          cache: gradle
 
-      - name: Install Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.10'
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
 
-      - name: Generate Gradle Wrapper
-        run: gradle wrapper
-
-      - name: Make Gradle Wrapper executable
+      - name: Make Gradle executable
         run: chmod +x ./gradlew
 
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug --stacktrace
+      # Re-create the signing keystore from GitHub Secret
+      - name: Decode signing keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$GITHUB_WORKSPACE/release-key.jks"
 
-      - name: Upload APK
+      # Build signed release APK
+      - name: Build Release APK
+        env:
+          KEYSTORE_FILE: ${{ github.workspace }}/release-key.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file="$KEYSTORE_FILE" \
+            -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
+
+      # Upload APK so you can download it from GitHub Actions
+      - name: Upload signed APK
         uses: actions/upload-artifact@v4
         with:
-          name: MyJournal-Debug-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: MyJournal-Release-APK
+          path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+
+      # Remove keystore from runner
+      - name: Delete temporary keystore
+        if: always()
+        run: rm -f "$GITHUB_WORKSPACE/release-key.jks"
