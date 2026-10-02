@@ -142,7 +142,7 @@ fun SettingsScreen(
             }
 
             Spacer(Modifier.height(16.dp))
-            Section("Daily reminder (real)")
+            Section("Daily reminder")
             Card(shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = Color.White), modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(14.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -216,8 +216,8 @@ fun SettingsScreen(
                     openUrl("mailto:admin@myjournalplus.com")
                 }
             }
-            SettingsItem(Icons.Default.Info, "About", "MyJournal+ 1.0.0 · Celma Tech") {
-                snack = "MyJournal+ v1.0.0"
+            SettingsItem(Icons.Default.Info, "About", "MyJournal+ 1.0.1 · Celma Tech") {
+                snack = "MyJournal+ v1.0.1"
             }
 
             Spacer(Modifier.height(28.dp))
