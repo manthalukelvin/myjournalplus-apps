@@ -32,18 +32,28 @@ jobs:
         run: |
           echo "$KEYSTORE_BASE64" | base64 --decode > "$GITHUB_WORKSPACE/release-key.jks"
 
+      - name: Detect signing key alias
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          DETECTED_ALIAS=$(keytool -list -v -keystore "$GITHUB_WORKSPACE/release-key.jks" -storepass "$KEYSTORE_PASSWORD" | awk -F': ' '/Alias name:/{print $2; exit}')
+          if [ -z "$DETECTED_ALIAS" ]; then
+            echo "::error::Unable to detect a signing key alias from release-key.jks"
+            exit 1
+          fi
+          echo "RELEASE_KEY_ALIAS=$DETECTED_ALIAS" >> "$GITHUB_ENV"
+
       # Build signed release APK
       - name: Build Release APK
         env:
           KEYSTORE_FILE: ${{ github.workspace }}/release-key.jks
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           ./gradlew assembleRelease \
             -Pandroid.injected.signing.store.file="$KEYSTORE_FILE" \
             -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
-            -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
+            -Pandroid.injected.signing.key.alias="$RELEASE_KEY_ALIAS" \
             -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
 
       # Upload APK so you can download it from GitHub Actions
