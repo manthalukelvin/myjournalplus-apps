@@ -161,7 +161,7 @@ private fun PinLockOverlay(
                 )
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    "App Locked",
+                    "MyJournal+ Locked",
                     fontWeight = FontWeight.Bold,
                     fontSize = 22.sp,
                     color = AppColors.TextPrimary
