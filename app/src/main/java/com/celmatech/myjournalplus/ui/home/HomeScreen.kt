@@ -54,6 +54,8 @@ fun HomeScreen(
     var searchQuery by remember { mutableStateOf("") }
     var showMenu by remember { mutableStateOf(false) }
     var showPremiumDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    var deleting by remember { mutableStateOf(false) }
 
     val filtered = remember(entries, searchQuery) {
         if (searchQuery.isBlank()) entries
@@ -290,11 +292,50 @@ fun HomeScreen(
                             onEditEntry(selected!!.id)
                         },
                         onDelete = {
-                            viewModel.deleteEntry(selected!!)
-                            showPreview = false
+                            showDeleteConfirm = true
                         }
                     )
                 }
+            }
+
+            if (showDeleteConfirm && selected != null) {
+                AlertDialog(
+                    onDismissRequest = { if (!deleting) showDeleteConfirm = false },
+                    title = { Text("Delete journal entry?") },
+                    text = {
+                        Text(
+                            "\"${selected!!.title.ifBlank { "Untitled" }}\" will be permanently deleted. This cannot be undone."
+                        )
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                if (deleting) return@Button
+                                deleting = true
+                                viewModel.deleteEntry(selected!!) { ok ->
+                                    deleting = false
+                                    showDeleteConfirm = false
+                                    if (ok) {
+                                        showPreview = false
+                                    }
+                                }
+                            },
+                            enabled = !deleting,
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                        ) {
+                            if (deleting) {
+                                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = Color.White)
+                            } else {
+                                Text("Delete")
+                            }
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showDeleteConfirm = false }, enabled = !deleting) {
+                            Text("Cancel")
+                        }
+                    }
+                )
             }
 
             if (showPremiumDialog) {

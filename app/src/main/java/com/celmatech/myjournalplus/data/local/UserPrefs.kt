@@ -69,6 +69,10 @@ class UserPrefs(private val context: Context) {
 
     suspend fun setPinTimeout(min: Int) { context.dataStore.edit { it[PIN_TIMEOUT_MIN] = min } }
 
+    suspend fun setPinHash(hash: String) {
+        context.dataStore.edit { it[PIN_HASH] = hash }
+    }
+
     suspend fun setReminder(enabled: Boolean, hour: Int, minute: Int) {
         context.dataStore.edit {
             it[REMINDER_ENABLED] = enabled

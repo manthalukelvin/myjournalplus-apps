@@ -67,12 +67,15 @@ class HomeViewModel(
         _selectedEntry.value = entry
     }
 
-    fun deleteEntry(entry: JournalEntry) {
+    fun deleteEntry(entry: JournalEntry, onResult: ((Boolean) -> Unit)? = null) {
         viewModelScope.launch {
             try {
                 journalRepo.deleteEntry(entry.uid, entry.id)
                 if (_selectedEntry.value?.id == entry.id) _selectedEntry.value = null
-            } catch (_: Exception) { }
+                onResult?.invoke(true)
+            } catch (_: Exception) {
+                onResult?.invoke(false)
+            }
         }
     }
 
