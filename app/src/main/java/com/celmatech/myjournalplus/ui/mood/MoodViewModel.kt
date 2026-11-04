@@ -4,20 +4,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.celmatech.myjournalplus.data.model.MoodLog
-<<<<<<< HEAD
 import com.celmatech.myjournalplus.data.model.MoodType
 import com.celmatech.myjournalplus.data.repository.JournalRepository
 import com.celmatech.myjournalplus.util.Analytics
 import com.celmatech.myjournalplus.util.CrashReporting
-=======
-import com.celmatech.myjournalplus.data.repository.JournalRepository
->>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-<<<<<<< HEAD
 import java.util.Calendar
 import java.util.Date
 
@@ -31,8 +26,6 @@ data class MoodStats(
     val streakDays: Int = 0,
     val totalLogs: Int = 0
 )
-=======
->>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
 
 class MoodViewModel(
     private val repo: JournalRepository = JournalRepository()
@@ -40,7 +33,6 @@ class MoodViewModel(
     private val _logs = MutableStateFlow<List<MoodLog>>(emptyList())
     val logs: StateFlow<List<MoodLog>> = _logs.asStateFlow()
 
-<<<<<<< HEAD
     private val _stats = MutableStateFlow(MoodStats())
     val stats: StateFlow<MoodStats> = _stats.asStateFlow()
 
@@ -50,25 +42,18 @@ class MoodViewModel(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
-=======
->>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
     init {
         val uid = FirebaseAuth.getInstance().currentUser?.uid
         if (uid != null) {
             viewModelScope.launch {
-<<<<<<< HEAD
                 repo.moodsFlow(uid).collectLatest { list ->
                     _logs.value = list
                     _stats.value = computeStats(list)
                 }
-=======
-                repo.moodsFlow(uid).collectLatest { _logs.value = it }
->>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
             }
         }
     }
 
-<<<<<<< HEAD
     fun logMood(mood: MoodType, score: Int, note: String, onDone: (Boolean) -> Unit) {
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: run {
             onDone(false)
@@ -88,13 +73,6 @@ class MoodViewModel(
                 Analytics.moodRecorded(mood.label)
                 onDone(true)
             }
-=======
-    fun logMood(mood: String, score: Int, note: String, onDone: () -> Unit) {
-        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
-        viewModelScope.launch {
-            repo.logMood(uid, mood, score, note)
-            onDone()
->>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
         }
     }
 
@@ -102,7 +80,6 @@ class MoodViewModel(
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
         viewModelScope.launch {
             val result = repo.deleteMood(uid, logId)
-<<<<<<< HEAD
             if (result.isFailure) {
                 result.exceptionOrNull()?.let { CrashReporting.moodDeleteFailed(it) }
             }
@@ -207,9 +184,4 @@ class MoodViewModel(
             totalLogs = all.size
         )
     }
-=======
-            onDone(result.isSuccess)
-        }
-    }
->>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
 }

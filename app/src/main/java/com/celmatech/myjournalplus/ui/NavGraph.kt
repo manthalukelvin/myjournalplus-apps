@@ -1,13 +1,9 @@
 package com.celmatech.myjournalplus.ui
 
-<<<<<<< HEAD
 import com.celmatech.myjournalplus.util.Analytics
 import com.celmatech.myjournalplus.util.FcmRegistrar
 import androidx.compose.runtime.*
 import kotlinx.coroutines.launch
-=======
-import androidx.compose.runtime.*
->>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
@@ -49,10 +45,7 @@ fun NavGraph(
     authVm: AuthViewModel = viewModel()
 ) {
     val navController = rememberNavController()
-<<<<<<< HEAD
     val scope = rememberCoroutineScope()
-=======
->>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
     val user by authVm.currentUser.collectAsState()
     val profile by authVm.userProfile.collectAsState()
     // Start on Home if already signed in so Google / session restore never stuck on Login
@@ -77,11 +70,8 @@ fun NavGraph(
     LaunchedEffect(user) {
         val currentUser = user
         if (currentUser != null) {
-<<<<<<< HEAD
             // Register FCM token + subscribe to all_users for admin broadcasts
             try { FcmRegistrar.registerCurrentUser() } catch (_: Exception) { }
-=======
->>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
             val route = navController.currentBackStackEntry?.destination?.route
             if (route == Screen.Login.route || route == Screen.SignUp.route) {
                 navController.navigate(Screen.Home.route) {
@@ -123,10 +113,7 @@ fun NavGraph(
             )
         }
         composable(Screen.Home.route) {
-<<<<<<< HEAD
             LaunchedEffect(Unit) { Analytics.pageView("home") }
-=======
->>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
             val context = LocalContext.current
             LaunchedEffect(user) {
                 val currentUser = user
@@ -175,10 +162,7 @@ fun NavGraph(
                 onInsights = { navController.navigate(Screen.Insights.route) },
                 onSettings = { navController.navigate(Screen.Settings.route) },
                 onLogout = {
-<<<<<<< HEAD
                 scope.launch { try { FcmRegistrar.unregisterOnLogout() } catch (_: Exception) { } }
-=======
->>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
                     authVm.logout()
                     navController.navigate(Screen.Login.route) {
                         popUpTo(0) { inclusive = true }
@@ -202,10 +186,7 @@ fun NavGraph(
             )
         }
         composable(Screen.Mood.route) {
-<<<<<<< HEAD
             LaunchedEffect(Unit) { Analytics.pageView("mood") }
-=======
->>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
             MoodScreen(
                 isPremium = profile?.isPremium == true,
                 onBack = { navController.popBackStack() },
@@ -213,10 +194,7 @@ fun NavGraph(
             )
         }
         composable(Screen.Insights.route) {
-<<<<<<< HEAD
             LaunchedEffect(Unit) { Analytics.pageView("insights") }
-=======
->>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
             AiInsightsScreen(
                 isPremium = profile?.isPremium == true,
                 onBack = { navController.popBackStack() }
@@ -227,10 +205,7 @@ fun NavGraph(
                 profile = profile,
                 onBack = { navController.popBackStack() },
                 onLogout = {
-<<<<<<< HEAD
                 scope.launch { try { FcmRegistrar.unregisterOnLogout() } catch (_: Exception) { } }
-=======
->>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
                     authVm.logout()
                     navController.navigate(Screen.Login.route) {
                         popUpTo(0) { inclusive = true }

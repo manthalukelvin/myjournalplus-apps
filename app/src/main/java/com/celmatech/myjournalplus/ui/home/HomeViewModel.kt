@@ -6,11 +6,8 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuth.AuthStateListener
 import com.celmatech.myjournalplus.data.model.JournalEntry
 import com.celmatech.myjournalplus.data.repository.JournalRepository
-<<<<<<< HEAD
 import com.celmatech.myjournalplus.util.Analytics
 import com.celmatech.myjournalplus.util.CrashReporting
-=======
->>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -77,15 +74,10 @@ class HomeViewModel(
             try {
                 journalRepo.deleteEntry(entry.uid, entry.id)
                 if (_selectedEntry.value?.id == entry.id) _selectedEntry.value = null
-<<<<<<< HEAD
                 Analytics.journalDeleted()
                 onResult?.invoke(true)
             } catch (e: Exception) {
                 CrashReporting.journalDeleteFailed(e)
-=======
-                onResult?.invoke(true)
-            } catch (_: Exception) {
->>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
                 onResult?.invoke(false)
             }
         }

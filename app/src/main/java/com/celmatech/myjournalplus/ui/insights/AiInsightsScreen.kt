@@ -2,10 +2,7 @@ package com.celmatech.myjournalplus.ui.insights
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-<<<<<<< HEAD
 import androidx.compose.foundation.text.selection.SelectionContainer
-=======
->>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -24,13 +21,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-<<<<<<< HEAD
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.AnnotatedString as ComposeAnnotatedString
-=======
-import androidx.compose.ui.platform.LocalFocusManager
->>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -38,11 +31,8 @@ import androidx.compose.ui.unit.sp
 import com.celmatech.myjournalplus.ui.components.PremiumBadge
 import com.celmatech.myjournalplus.ui.components.PremiumUpgradeDialog
 import com.celmatech.myjournalplus.ui.theme.AppColors
-<<<<<<< HEAD
 import com.celmatech.myjournalplus.util.AiMarkdown
 import com.celmatech.myjournalplus.util.Analytics
-=======
->>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
 import com.celmatech.myjournalplus.util.GeminiService
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
@@ -153,10 +143,7 @@ fun AiInsightsScreen(isPremium: Boolean, onBack: () -> Unit) {
                         text = reply.answer
                     )
                     if (!isPremium) freeUsed = true
-<<<<<<< HEAD
                     Analytics.aiUsed()
-=======
->>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
                 },
                 onFailure = { e ->
                     if (e is GeminiService.FreeLimitException) {
@@ -447,12 +434,9 @@ private fun SuggestionChip(text: String, enabled: Boolean, onClick: () -> Unit) 
 @Composable
 private fun MessageBubble(msg: ChatMessage) {
     val isUser = msg.role == "user"
-<<<<<<< HEAD
     val clipboard = LocalClipboardManager.current
     var copied by remember { mutableStateOf(false) }
 
-=======
->>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
     Row(
         Modifier.fillMaxWidth(),
         horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
@@ -465,7 +449,6 @@ private fun MessageBubble(msg: ChatMessage) {
                 bottomEnd = if (isUser) 4.dp else 16.dp
             ),
             color = if (isUser) AppColors.Primary else Color.White,
-<<<<<<< HEAD
             modifier = Modifier.widthIn(max = 340.dp)
         ) {
             Column(Modifier.padding(14.dp)) {
@@ -521,17 +504,6 @@ private fun MessageBubble(msg: ChatMessage) {
                     }
                 }
             }
-=======
-            modifier = Modifier.widthIn(max = 320.dp)
-        ) {
-            Text(
-                msg.text,
-                Modifier.padding(14.dp),
-                color = if (isUser) Color.White else AppColors.TextPrimary,
-                fontSize = 15.sp,
-                lineHeight = 22.sp
-            )
->>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
         }
     }
 }
