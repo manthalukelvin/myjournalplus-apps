@@ -29,11 +29,37 @@ object MarkdownFormat {
     /** Preview — markers removed, styles applied. */
     fun toAnnotated(raw: String, baseColor: Color = Color(0xFF374151)): AnnotatedString {
         if (raw.isBlank()) return AnnotatedString("(No content)")
+        val (plain, ranges) = MarkdownCodec.decode(raw)
+        val len = plain.length
+        val styles = Array(len) { mutableSetOf<RichStyle>() }
+        ranges.forEach { range ->
+            val start = range.start.coerceIn(0, len)
+            val end = range.end.coerceIn(start, len)
+            for (index in start until end) styles[index].add(range.style)
+        }
+
         return buildAnnotatedString {
-            val lines = raw.split('\n')
-            lines.forEachIndexed { idx, line ->
-                appendInlineHideMarkers(line, baseColor)
-                if (idx < lines.lastIndex) append("\n")
+            var index = 0
+            while (index < len) {
+                var end = index + 1
+                while (end < len && styles[end] == styles[index]) end++
+                val active = styles[index]
+                val decorations = mutableListOf<TextDecoration>()
+                if (RichStyle.Underline in active) decorations.add(TextDecoration.Underline)
+                if (RichStyle.Strike in active) decorations.add(TextDecoration.LineThrough)
+                val span = SpanStyle(
+                    color = baseColor,
+                    fontWeight = if (RichStyle.Bold in active) FontWeight.Bold else FontWeight.Normal,
+                    fontStyle = if (RichStyle.Italic in active) FontStyle.Italic else FontStyle.Normal,
+                    textDecoration = when (decorations.size) {
+                        0 -> TextDecoration.None
+                        1 -> decorations[0]
+                        else -> TextDecoration.combine(decorations)
+                    },
+                    background = if (RichStyle.Highlight in active) Color(0x337B6CFF) else Color.Unspecified
+                )
+                withStyle(span) { append(plain.substring(index, end)) }
+                index = end
             }
         }
     }

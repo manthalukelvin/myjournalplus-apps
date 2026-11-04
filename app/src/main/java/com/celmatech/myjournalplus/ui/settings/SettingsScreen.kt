@@ -216,8 +216,8 @@ fun SettingsScreen(
                     openUrl("mailto:admin@myjournalplus.com")
                 }
             }
-            SettingsItem(Icons.Default.Info, "About", "MyJournal+ 1.0.1 · Celma Tech") {
-                snack = "MyJournal+ v1.0.1"
+            SettingsItem(Icons.Default.Info, "About", "MyJournal+ 1.0.2 · Celma Tech") {
+                snack = "MyJournal+ v1.0.2"
             }
 
             Spacer(Modifier.height(28.dp))

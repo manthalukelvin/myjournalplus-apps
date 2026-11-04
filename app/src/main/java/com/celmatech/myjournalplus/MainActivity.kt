@@ -138,8 +138,9 @@ class MainActivity : ComponentActivity() {
                             onSubmit = {
                                 if (unlockInProgress) return@PinLockScreen
                                 unlockInProgress = true
+                                val enteredPin = pinInput
                                 val hash = pinHash
-                                val ok = hash != null && PinHasher.verify(pinInput, hash)
+                                val ok = hash != null && PinHasher.verify(enteredPin, hash)
                                 if (ok) {
                                     locked = false
                                     pinInput = ""
@@ -148,7 +149,7 @@ class MainActivity : ComponentActivity() {
                                         prefs.markUnlocked()
                                         // Migrate old SHA-256 hashes to PBKDF2 on successful unlock
                                         if (!hash!!.startsWith("pbkdf2$")) {
-                                            val newHash = PinHasher.hash(pinInput)
+                                            val newHash = PinHasher.hash(enteredPin)
                                             prefs.setPinHash(newHash)
                                         }
                                     }

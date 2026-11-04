@@ -50,7 +50,7 @@ class DeviceRepository(
             "platform" to "Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})",
             "lastActive" to Timestamp.now(),
             "approxLocation" to region,
-            "appVersion" to "1.0.0"
+            "appVersion" to "1.0.2"
         )
         ref(uid).document(id).set(data, com.google.firebase.firestore.SetOptions.merge()).await()
     }

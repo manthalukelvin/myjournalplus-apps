@@ -63,7 +63,7 @@ async function verifyToken(req) {
 }
 
 app.get("/", (_req, res) => {
-  res.json({ ok: true, service: "MyJournalPlus AI", version: "1.0.1" });
+  res.json({ ok: true, service: "MyJournalPlus AI", version: "1.0.2" });
 });
 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));

@@ -15,11 +15,11 @@ android {
         applicationId = "com.celmatech.myjournalplus"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "1.0.1"
+        versionCode = 4
+        versionName = "1.0.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // Gemini key is ONLY on your server (my24hrs.onrender.com) — never in the APK
+        // Gemini key is ONLY on your server (myjournalplusaiinsights.vercel.app) — never in the APK
         buildConfigField("String", "AI_API_BASE_URL", "\"https://myjournalplusaiinsights.vercel.app\"")
         buildConfigField("String", "ADMOB_BANNER_ID", "\"ca-app-pub-3124459433123264/3508994969\"")
         buildConfigField("String", "ADMOB_APP_ID", "\"ca-app-pub-3124459433123264~9313302636\"")

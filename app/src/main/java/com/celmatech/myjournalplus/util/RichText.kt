@@ -64,6 +64,7 @@ class RichTextState(
     var ranges by mutableStateOf<List<StyleRange>>(emptyList())
         private set
     var selection by mutableStateOf(TextRange.Zero)
+    private var lastNonEmptySelection = TextRange.Zero
 
     val textFieldValue: TextFieldValue
         get() = TextFieldValue(text, selection)
@@ -73,6 +74,7 @@ class RichTextState(
         text = parsed.first
         ranges = parsed.second
         selection = TextRange(text.length)
+        lastNonEmptySelection = TextRange.Zero
     }
 
     fun loadMarkdown(markdown: String) {
@@ -80,6 +82,7 @@ class RichTextState(
         text = parsed.first
         ranges = parsed.second
         selection = TextRange(text.length)
+        lastNonEmptySelection = TextRange.Zero
     }
 
     /** Markdown string safe for Firestore (backward compatible). */
@@ -90,19 +93,30 @@ class RichTextState(
 
     fun onValueChange(newValue: TextFieldValue) {
         val oldText = text
-        val newText = newValue.text
+        val capitalized = capitalizeSentenceStarts(newValue.text)
+        val typedValue = TextFieldValue(capitalized, newValue.selection)
+        val continued = continueListIfNeeded(oldText, typedValue)
+        val finalValue = continued ?: typedValue
+        val newText = finalValue.text
         if (oldText != newText) {
             ranges = adjustRanges(oldText, newText, ranges)
         }
         text = newText
-        selection = newValue.selection
+        selection = finalValue.selection
+        if (selection.min != selection.max) {
+            lastNonEmptySelection = selection
+        }
     }
 
     fun toggleStyle(style: RichStyle) {
-        val s = selection.min
-        val e = selection.max
+        val activeSelection = if (selection.min < selection.max) {
+            selection
+        } else {
+            lastNonEmptySelection
+        }
+        val s = activeSelection.min.coerceIn(0, text.length)
+        val e = activeSelection.max.coerceIn(s, text.length)
         if (s == e) {
-            // No selection: nothing to toggle (avoid surprising whole-doc changes)
             return
         }
         val covering = ranges.filter { it.style == style && it.start <= s && it.end >= e }
@@ -128,6 +142,7 @@ class RichTextState(
         }
         // Preserve selection
         selection = TextRange(s, e)
+        lastNonEmptySelection = selection
     }
 
     fun applyBullet() {
@@ -141,6 +156,7 @@ class RichTextState(
         ranges = ranges.mapNotNull { it.shifted(insert.length, lineStart)?.clipped(newText.length) }
         text = newText
         selection = TextRange(selection.min + insert.length, selection.max + insert.length)
+        lastNonEmptySelection = selection
     }
 
     fun applyNumbered() {
@@ -160,6 +176,70 @@ class RichTextState(
         ranges = ranges.mapNotNull { it.shifted(insert.length, lineStart)?.clipped(newText.length) }
         text = newText
         selection = TextRange(selection.min + insert.length, selection.max + insert.length)
+        lastNonEmptySelection = selection
+    }
+
+    private fun continueListIfNeeded(
+        oldText: String,
+        newValue: TextFieldValue
+    ): TextFieldValue? {
+        val newText = newValue.text
+        if (newText.length <= oldText.length) return null
+        val pos = newValue.selection.min
+        if (pos <= 0 || pos > newText.length || newText[pos - 1] != '\n') return null
+
+        val beforeNewline = pos - 1
+        val lineStart = newText.lastIndexOf('\n', (beforeNewline - 1).coerceAtLeast(0))
+            .let { if (it < 0) 0 else it + 1 }
+        if (lineStart >= beforeNewline) return null
+        val previousLine = newText.substring(lineStart, beforeNewline)
+
+        val bullet = Regex("^[•\\-*]\\s+(.*)$").find(previousLine)
+        if (bullet != null) {
+            if (bullet.groupValues[1].isBlank()) {
+                return TextFieldValue(
+                    newText.removeRange(lineStart, pos),
+                    TextRange(lineStart)
+                )
+            }
+            return TextFieldValue(
+                newText.replaceRange(pos, pos, "• "),
+                TextRange(pos + 2)
+            )
+        }
+
+        val numbered = Regex("^(\\d+)\\.\\s+(.*)$").find(previousLine)
+        if (numbered != null) {
+            if (numbered.groupValues[2].isBlank()) {
+                return TextFieldValue(
+                    newText.removeRange(lineStart, pos),
+                    TextRange(lineStart)
+                )
+            }
+            val next = (numbered.groupValues[1].toIntOrNull() ?: 0) + 1
+            val prefix = "$next. "
+            return TextFieldValue(
+                newText.replaceRange(pos, pos, prefix),
+                TextRange(pos + prefix.length)
+            )
+        }
+        return null
+    }
+
+    private fun capitalizeSentenceStarts(value: String): String {
+        if (value.isEmpty()) return value
+        val chars = value.toCharArray()
+        var capitalizeNext = true
+        for (i in chars.indices) {
+            val c = chars[i]
+            if (c.isLetter()) {
+                if (capitalizeNext) chars[i] = c.uppercaseChar()
+                capitalizeNext = false
+            } else if (c == '\n' || c == '.' || c == '!' || c == '?') {
+                capitalizeNext = true
+            }
+        }
+        return String(chars)
     }
 
     fun isStyleActive(style: RichStyle): Boolean {
@@ -396,6 +476,20 @@ object MarkdownCodec {
                     i += 2
                 }
                 markdown[i] == '_' -> {
+                    if (openAt.containsKey(RichStyle.Italic)) {
+                        openAt.remove(RichStyle.Italic)?.let { start ->
+                            ranges.add(StyleRange(start, plain.length, RichStyle.Italic))
+                        }
+                    } else {
+                        openAt[RichStyle.Italic] = plain.length
+                    }
+                    i += 1
+                }
+                markdown[i] == '*' &&
+                    (i + 1 >= markdown.length || markdown[i + 1] != '*') &&
+                    (openAt.containsKey(RichStyle.Italic) ||
+                        i + 1 >= markdown.length ||
+                        !markdown[i + 1].isWhitespace()) -> {
                     if (openAt.containsKey(RichStyle.Italic)) {
                         openAt.remove(RichStyle.Italic)?.let { start ->
                             ranges.add(StyleRange(start, plain.length, RichStyle.Italic))

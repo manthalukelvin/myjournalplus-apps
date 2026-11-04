@@ -1,6 +1,6 @@
 {
   "name": "myjournalplus-ai-server",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Secure AI proxy for MyJournalPlus — Gemini key stays server-side, free limit strictly enforced",
   "main": "index.js",
   "scripts": {

@@ -258,7 +258,7 @@ fun EditEntryScreen(
             // Title
             BasicTextField(
                 value = title,
-                onValueChange = { title = it.take(200) },
+                onValueChange = { title = capitalizeSentenceStarts(it).take(200) },
                 textStyle = TextStyle(
                     color = AppColors.TextPrimary,
                     fontSize = 22.sp,
@@ -375,6 +375,22 @@ fun EditEntryScreen(
     if (showPremiumDialog) {
         PremiumUpgradeDialog(onDismiss = { showPremiumDialog = false })
     }
+}
+
+private fun capitalizeSentenceStarts(value: String): String {
+    if (value.isEmpty()) return value
+    val chars = value.toCharArray()
+    var capitalizeNext = true
+    for (i in chars.indices) {
+        val c = chars[i]
+        if (c.isLetter()) {
+            if (capitalizeNext) chars[i] = c.uppercaseChar()
+            capitalizeNext = false
+        } else if (c == '.' || c == '!' || c == '?') {
+            capitalizeNext = true
+        }
+    }
+    return String(chars)
 }
 
 @Composable
