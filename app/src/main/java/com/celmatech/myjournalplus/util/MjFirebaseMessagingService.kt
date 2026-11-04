@@ -11,16 +11,12 @@ import com.celmatech.myjournalplus.R
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
-<<<<<<< HEAD
 import com.google.firebase.messaging.FirebaseMessaging
-=======
->>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 
 /**
  * Receives admin / FCM pushes.
-<<<<<<< HEAD
  * On new token: persist to fcmTokens[] and (re)subscribe to all_users.
  */
 class MjFirebaseMessagingService : FirebaseMessagingService() {
@@ -41,21 +37,6 @@ class MjFirebaseMessagingService : FirebaseMessagingService() {
         FirebaseMessaging.getInstance()
             .subscribeToTopic(FcmRegistrar.TOPIC_ALL_USERS)
             .addOnFailureListener { e -> CrashReporting.notificationFailed(e) }
-=======
- *
- * Setup guidance:
- * 1. Firebase Console → Cloud Messaging
- * 2. Or send to topic "all_users" after clients subscribe
- * 3. On login, app saves FCM token under users/{uid}.fcmTokens
- * 4. Admin can send via Console "Send test message" or Admin SDK
- */
-class MjFirebaseMessagingService : FirebaseMessagingService() {
-    override fun onNewToken(token: String) {
-        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
-        FirebaseFirestore.getInstance().collection("users").document(uid)
-            .update("fcmTokens", FieldValue.arrayUnion(token))
-            .addOnFailureListener { }
->>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
     }
 
     override fun onMessageReceived(message: RemoteMessage) {
@@ -68,7 +49,6 @@ class MjFirebaseMessagingService : FirebaseMessagingService() {
                 NotificationChannel(channelId, "Announcements", NotificationManager.IMPORTANCE_DEFAULT)
             )
         }
-<<<<<<< HEAD
         val open = message.data["open"]
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -76,10 +56,6 @@ class MjFirebaseMessagingService : FirebaseMessagingService() {
         }
         val pi = PendingIntent.getActivity(
             this, 0, intent,
-=======
-        val pi = PendingIntent.getActivity(
-            this, 0, Intent(this, MainActivity::class.java),
->>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         nm.notify(
@@ -92,9 +68,6 @@ class MjFirebaseMessagingService : FirebaseMessagingService() {
                 .setAutoCancel(true)
                 .build()
         )
-<<<<<<< HEAD
         Analytics.notificationOpened()
-=======
->>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
     }
 }
