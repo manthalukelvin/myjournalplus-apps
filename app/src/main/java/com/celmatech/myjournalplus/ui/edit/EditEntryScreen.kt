@@ -1,13 +1,19 @@
 package com.celmatech.myjournalplus.ui.edit
 
+<<<<<<< HEAD
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+=======
+>>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+<<<<<<< HEAD
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+=======
+>>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
@@ -16,6 +22,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+<<<<<<< HEAD
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -30,10 +37,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+=======
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.dp
+>>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.celmatech.myjournalplus.data.model.JournalEntry
 import com.celmatech.myjournalplus.ui.components.PremiumUpgradeDialog
 import com.celmatech.myjournalplus.ui.theme.AppColors
+<<<<<<< HEAD
 import com.celmatech.myjournalplus.util.Analytics
 import com.celmatech.myjournalplus.util.CrashReporting
 import com.celmatech.myjournalplus.util.RichStyle
@@ -44,6 +60,11 @@ import com.google.firebase.auth.FirebaseAuth
  * Immersive full-page editor with true WYSIWYG rich text.
  * Styles are span-based (bold looks bold). Storage stays Markdown-compatible.
  */
+=======
+import com.celmatech.myjournalplus.util.MarkdownFormat
+import com.google.firebase.auth.FirebaseAuth
+
+>>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditEntryScreen(
@@ -55,11 +76,16 @@ fun EditEntryScreen(
 ) {
     val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
     var title by remember { mutableStateOf("") }
+<<<<<<< HEAD
     val rich = remember { RichTextState() }
+=======
+    var body by remember { mutableStateOf(TextFieldValue("")) }
+>>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var loaded by remember { mutableStateOf(false) }
     var showPremiumDialog by remember { mutableStateOf(false) }
+<<<<<<< HEAD
     var isNew by remember { mutableStateOf(entryId.isNullOrBlank()) }
 
     val saveState by viewModel.saveState.collectAsState()
@@ -68,12 +94,15 @@ fun EditEntryScreen(
     // Force recomposition when rich text / selection changes
     val bodyValue = rich.textFieldValue
     val rangesVersion = rich.ranges
+=======
+>>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
 
     LaunchedEffect(entryId) {
         if (!entryId.isNullOrBlank() && !loaded) {
             try {
                 viewModel.loadEntry(uid, entryId)?.let {
                     title = it.title
+<<<<<<< HEAD
                     rich.loadMarkdown(it.content)
                 }
             } catch (e: Exception) {
@@ -115,6 +144,17 @@ fun EditEntryScreen(
     }
 
     val wordCount = rich.plainWordCount()
+=======
+                    body = TextFieldValue(it.content, TextRange(it.content.length))
+                }
+            } catch (_: Exception) { }
+            loaded = true
+        }
+    }
+
+    val plain = MarkdownFormat.plainText(body.text)
+    val wordCount = plain.split(Regex("\\s+")).filter { it.isNotBlank() }.size
+>>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
     val freeLimit = 500
     val overLimit = !isPremium && wordCount > freeLimit
 
@@ -122,10 +162,29 @@ fun EditEntryScreen(
         if (!isPremium) showPremiumDialog = true else action()
     }
 
+<<<<<<< HEAD
+=======
+    fun onBodyChange(newVal: TextFieldValue) {
+        val continued = MarkdownFormat.continueListIfNeeded(body, newVal)
+        body = continued ?: newVal
+    }
+
+    val fieldColors = OutlinedTextFieldDefaults.colors(
+        focusedTextColor = AppColors.TextPrimary,
+        unfocusedTextColor = AppColors.TextPrimary,
+        focusedContainerColor = Color.White,
+        unfocusedContainerColor = Color.White,
+        cursorColor = AppColors.Primary,
+        focusedBorderColor = AppColors.Primary,
+        unfocusedBorderColor = AppColors.Border
+    )
+
+>>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
+<<<<<<< HEAD
                     Column {
                         Text(
                             if (isNew) "New Entry" else "Edit Entry",
@@ -140,6 +199,15 @@ fun EditEntryScreen(
                         viewModel.flushPending(title, rich.toMarkdown())
                         onBack()
                     }) {
+=======
+                    Text(
+                        if (entryId.isNullOrBlank()) "New Entry" else "Edit Entry",
+                        color = Color.White
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+>>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = Color.White)
                     }
                 },
@@ -152,12 +220,16 @@ fun EditEntryScreen(
                             }
                             loading = true
                             error = null
+<<<<<<< HEAD
                             val markdown = rich.toMarkdown()
+=======
+>>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
                             viewModel.save(
                                 JournalEntry(
                                     id = entryId ?: "",
                                     uid = uid,
                                     title = title,
+<<<<<<< HEAD
                                     content = markdown
                                 )
                             ) { ok, msg ->
@@ -181,6 +253,21 @@ fun EditEntryScreen(
                         } else {
                             Icon(Icons.Default.Save, "Save", tint = Color.White)
                         }
+=======
+                                    content = body.text
+                                )
+                            ) { ok, msg ->
+                                loading = false
+                                if (ok) onSaved() else error = msg
+                            }
+                        },
+                        enabled = !loading && body.text.isNotBlank()
+                    ) {
+                        if (loading) CircularProgressIndicator(
+                            Modifier.size(22.dp), color = Color.White, strokeWidth = 2.dp
+                        )
+                        else Icon(Icons.Default.Save, null, tint = Color.White)
+>>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = AppColors.Primary)
@@ -188,12 +275,17 @@ fun EditEntryScreen(
         },
         containerColor = AppColors.ScreenBg
     ) { padding ->
+<<<<<<< HEAD
+=======
+        // imePadding keeps content above keyboard; body field uses weight + internal scroll
+>>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
         Column(
             Modifier
                 .padding(padding)
                 .fillMaxSize()
                 .imePadding()
         ) {
+<<<<<<< HEAD
             // Formatting toolbar — toggles real styles on selection
             Surface(color = Color.White, shadowElevation = 1.dp) {
                 Row(
@@ -251,10 +343,55 @@ fun EditEntryScreen(
                         TextButton(onClick = { showPremiumDialog = true }) {
                             Text("✦ Premium", color = AppColors.Primary, fontSize = 12.sp)
                         }
+=======
+            // Formatting toolbar (fixed)
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                FormatChip("B", FontWeight.Bold) {
+                    requirePremium { body = MarkdownFormat.wrap(body, "**") }
+                }
+                FormatChip("I") {
+                    requirePremium { body = MarkdownFormat.wrap(body, "_") }
+                }
+                FormatChip("U") {
+                    requirePremium { body = MarkdownFormat.wrap(body, "__") }
+                }
+                FormatChip("S") {
+                    requirePremium { body = MarkdownFormat.wrap(body, "~~") }
+                }
+                IconButton(onClick = {
+                    requirePremium { body = MarkdownFormat.insertBullet(body) }
+                }) {
+                    Icon(Icons.AutoMirrored.Filled.FormatListBulleted, null, tint = AppColors.Primary)
+                }
+                IconButton(onClick = {
+                    requirePremium { body = MarkdownFormat.insertNumbered(body) }
+                }) {
+                    Icon(Icons.Default.FormatListNumbered, null, tint = AppColors.Primary)
+                }
+                IconButton(onClick = {
+                    requirePremium { body = MarkdownFormat.wrap(body, "{{c}}", "{{/c}}") }
+                }) {
+                    Icon(Icons.Default.FormatColorText, null, tint = AppColors.Primary)
+                }
+                if (!isPremium) {
+                    TextButton(onClick = { showPremiumDialog = true }) {
+                        Text(
+                            "✦ Format = Premium",
+                            color = AppColors.Primary,
+                            style = MaterialTheme.typography.labelSmall
+                        )
+>>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
                     }
                 }
             }
 
+<<<<<<< HEAD
             // Title
             BasicTextField(
                 value = title,
@@ -432,4 +569,78 @@ private fun FormatIconToggle(
     ) {
         Box(contentAlignment = Alignment.Center) { icon(fg) }
     }
+=======
+            OutlinedTextField(
+                value = title,
+                onValueChange = { title = it },
+                label = { Text("Title") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                colors = fieldColors,
+                textStyle = LocalTextStyle.current.copy(color = AppColors.TextPrimary)
+            )
+            Spacer(Modifier.height(10.dp))
+
+            // Larger, flexible "Write your thoughts" card — fills remaining space,
+            // scrolls internally when content is long, comfortable on any phone size.
+            OutlinedTextField(
+                value = body,
+                onValueChange = { onBodyChange(it) },
+                label = { Text("Write your thoughts…") },
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp)
+                    .defaultMinSize(minHeight = 220.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = fieldColors,
+                textStyle = LocalTextStyle.current.copy(
+                    color = AppColors.TextPrimary,
+                    fontSize = MaterialTheme.typography.bodyLarge.fontSize
+                ),
+                visualTransformation = MarkdownFormat.visualTransformation(AppColors.TextPrimary)
+            )
+
+            // Compact footer: word count only (notice texts removed for clean writing UX)
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "$wordCount words" + if (!isPremium) " / $freeLimit free" else "",
+                    color = if (overLimit) MaterialTheme.colorScheme.error else AppColors.TextMuted,
+                    style = MaterialTheme.typography.bodySmall
+                )
+                if (!isPremium) {
+                    TextButton(onClick = { showPremiumDialog = true }) {
+                        Text("✦ Unlimited", color = AppColors.Primary, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+            if (error != null) {
+                Text(
+                    error!!,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+            }
+        }
+    }
+    if (showPremiumDialog) PremiumUpgradeDialog(onDismiss = { showPremiumDialog = false })
+}
+
+@Composable
+private fun FormatChip(label: String, weight: FontWeight = FontWeight.Normal, onClick: () -> Unit) {
+    AssistChip(
+        onClick = onClick,
+        label = { Text(label, fontWeight = weight, color = AppColors.TextPrimary) },
+        colors = AssistChipDefaults.assistChipColors(containerColor = Color.White)
+    )
+>>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
 }

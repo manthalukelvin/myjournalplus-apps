@@ -2,11 +2,17 @@ package com.celmatech.myjournalplus.ui.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+<<<<<<< HEAD
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.celmatech.myjournalplus.data.model.UserProfile
 import com.celmatech.myjournalplus.data.repository.AuthRepository
 import com.celmatech.myjournalplus.util.CrashReporting
+=======
+import com.google.firebase.auth.FirebaseUser
+import com.celmatech.myjournalplus.data.model.UserProfile
+import com.celmatech.myjournalplus.data.repository.AuthRepository
+>>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,10 +49,13 @@ class AuthViewModel(
     private var profileJob: Job? = null
 
     init {
+<<<<<<< HEAD
         // Keep Crashlytics user id in sync (non-sensitive UID only)
         FirebaseAuth.getInstance().addAuthStateListener { fa ->
             CrashReporting.setUser(fa.currentUser?.uid)
         }
+=======
+>>>>>>> bb2e8564354b35039192d34a53ed32a370b8b3f9
         viewModelScope.launch {
             authRepo.authStateFlow().collectLatest { user ->
                 _currentUser.value = user
