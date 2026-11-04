@@ -1,0 +1,19 @@
+{
+  "name": "myjournalplus-ai-server",
+  "version": "1.0.1",
+  "description": "Secure AI proxy for MyJournalPlus — Gemini key stays server-side, free limit strictly enforced",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "firebase-admin": "^12.5.0",
+    "@google/generative-ai": "^0.21.0",
+    "dotenv": "^16.4.5"
+  }
+}
