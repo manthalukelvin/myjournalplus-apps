@@ -2,6 +2,7 @@ package com.celmatech.myjournalplus.util
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.ParagraphStyle
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
@@ -11,7 +12,6 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.style.ParagraphStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 
@@ -65,8 +65,13 @@ object MarkdownFormat {
                     background = if (RichStyle.Highlight in active) Color(0x337B6CFF) else Color.Unspecified
                 )
                 val line = plain.substring(0, index).count { it == '\n' }
-                val paragraphAlignment = alignments[line.toString()]?.toIntOrNull()
-                    ?.let { runCatching { TextAlign(it) }.getOrNull() }
+                val paragraphAlignment = when (alignments[line.toString()]?.lowercase()) {
+                    "start", "left" -> TextAlign.Start
+                    "center" -> TextAlign.Center
+                    "end", "right" -> TextAlign.End
+                    "justify" -> TextAlign.Justify
+                    else -> null
+                }
                 if (paragraphAlignment != null) {
                     withStyle(ParagraphStyle(textAlign = paragraphAlignment)) {
                         withStyle(span) { append(plain.substring(index, end)) }

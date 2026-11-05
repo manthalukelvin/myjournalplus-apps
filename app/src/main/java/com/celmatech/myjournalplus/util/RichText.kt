@@ -14,8 +14,8 @@ import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.sp
 
@@ -98,7 +98,7 @@ class RichTextState(
         lastNonEmptySelection = TextRange.Zero
         alignments = alignmentData.mapNotNull { (key, value) ->
             val index = key.toIntOrNull()
-            val alignment = runCatching { TextAlign(value.toInt()) }.getOrNull()
+            val alignment = decodeAlignment(value)
             if (index != null && alignment != null) index to alignment else null
         }.toMap()
         undoStack.clear()
@@ -107,7 +107,7 @@ class RichTextState(
     }
 
     fun alignmentData(): Map<String, String> =
-        alignments.mapKeys { it.key.toString() }.mapValues { it.value.value.toString() }
+        alignments.mapKeys { it.key.toString() }.mapValues { encodeAlignment(it.value) }
 
     val canUndo: Boolean get() = undoStack.isNotEmpty()
     val canRedo: Boolean get() = redoStack.isNotEmpty()
@@ -135,6 +135,22 @@ class RichTextState(
         recordHistory()
         alignments = alignments.toMutableMap().apply {
             lines.forEach { this[it] = alignment }
+        }
+
+        private fun encodeAlignment(alignment: TextAlign): String = when (alignment) {
+            TextAlign.Start -> "start"
+            TextAlign.Center -> "center"
+            TextAlign.End -> "end"
+            TextAlign.Justify -> "justify"
+            else -> "start"
+        }
+
+        private fun decodeAlignment(value: String): TextAlign? = when (value.lowercase()) {
+            "start", "left" -> TextAlign.Start
+            "center" -> TextAlign.Center
+            "end", "right" -> TextAlign.End
+            "justify" -> TextAlign.Justify
+            else -> null
         }
         redoStack.clear()
         touchHistory()
