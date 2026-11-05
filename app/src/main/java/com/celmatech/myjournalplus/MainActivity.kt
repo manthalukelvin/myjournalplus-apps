@@ -34,6 +34,7 @@ import com.celmatech.myjournalplus.data.local.UserPrefs
 import com.celmatech.myjournalplus.ui.NavGraph
 import com.celmatech.myjournalplus.ui.theme.AppColors
 import com.celmatech.myjournalplus.ui.theme.MyJournalPlusTheme
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 import java.security.SecureRandom
 import javax.crypto.SecretKeyFactory
@@ -55,7 +56,21 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val context = LocalContext.current
-            val prefs = remember { UserPrefs(context) }
+            val auth = remember { FirebaseAuth.getInstance() }
+            var accountUid by remember { mutableStateOf(auth.currentUser?.uid.orEmpty()) }
+            DisposableEffect(auth) {
+                val listener = FirebaseAuth.AuthStateListener {
+                    accountUid = it.currentUser?.uid.orEmpty()
+                }
+                auth.addAuthStateListener(listener)
+                onDispose { auth.removeAuthStateListener(listener) }
+            }
+            val prefs = remember(accountUid) { UserPrefs(context, accountUid) }
+            LaunchedEffect(accountUid) {
+                if (accountUid.isNotBlank()) {
+                    runCatching { prefs.syncFromCloud() }
+                }
+            }
             val themeId by prefs.themeId.collectAsState(initial = "default")
             val pinEnabled by prefs.pinEnabled.collectAsState(initial = false)
             val pinHash by prefs.pinHash.collectAsState(initial = null)

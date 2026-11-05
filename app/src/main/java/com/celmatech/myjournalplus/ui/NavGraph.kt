@@ -126,7 +126,7 @@ fun NavGraph(
                         DeviceRepository().registerOrTouch(context, currentUser.uid)
                     } catch (_: Exception) { }
                     try {
-                        val prefs = UserPrefs(context)
+                        val prefs = UserPrefs(context, currentUser.uid)
                         val enabled = prefs.reminderEnabled.first()
                         if (enabled) {
                             ReminderScheduler.scheduleDaily(

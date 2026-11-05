@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -68,13 +69,14 @@ fun EditEntryScreen(
     // Force recomposition when rich text / selection changes
     val bodyValue = rich.textFieldValue
     val rangesVersion = rich.ranges
+    val alignmentData = rich.alignmentData()
 
     LaunchedEffect(entryId) {
         if (!entryId.isNullOrBlank() && !loaded) {
             try {
                 viewModel.loadEntry(uid, entryId)?.let {
                     title = it.title
-                    rich.loadMarkdown(it.content)
+                    rich.loadMarkdown(it.content, it.alignments)
                 }
             } catch (e: Exception) {
                 CrashReporting.editorException(e)
@@ -91,7 +93,7 @@ fun EditEntryScreen(
     // Autosave markdown serialization
     LaunchedEffect(title, bodyValue.text, rangesVersion) {
         if (loaded) {
-            viewModel.scheduleAutosave(title, rich.toMarkdown())
+            viewModel.scheduleAutosave(title, rich.toMarkdown(), alignmentData)
         }
     }
 
@@ -99,18 +101,18 @@ fun EditEntryScreen(
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
-                viewModel.flushPending(title, rich.toMarkdown())
+                viewModel.flushPending(title, rich.toMarkdown(), alignmentData)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
-            viewModel.flushPending(title, rich.toMarkdown())
+            viewModel.flushPending(title, rich.toMarkdown(), alignmentData)
         }
     }
 
     BackHandler {
-        viewModel.flushPending(title, rich.toMarkdown())
+        viewModel.flushPending(title, rich.toMarkdown(), alignmentData)
         onBack()
     }
 
@@ -137,7 +139,7 @@ fun EditEntryScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = {
-                        viewModel.flushPending(title, rich.toMarkdown())
+                        viewModel.flushPending(title, rich.toMarkdown(), alignmentData)
                         onBack()
                     }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = Color.White)
@@ -158,7 +160,8 @@ fun EditEntryScreen(
                                     id = entryId ?: "",
                                     uid = uid,
                                     title = title,
-                                    content = markdown
+                                    content = markdown,
+                                    alignments = alignmentData
                                 )
                             ) { ok, msg ->
                                 loading = false
@@ -204,6 +207,27 @@ fun EditEntryScreen(
                     horizontalArrangement = Arrangement.spacedBy(2.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    IconButton(onClick = { rich.undo() }, enabled = rich.canUndo) {
+                        Icon(
+                            Icons.Default.Undo,
+                            "Undo",
+                            tint = if (rich.canUndo) AppColors.TextPrimary else AppColors.TextMuted
+                        )
+                    }
+                    IconButton(onClick = { rich.redo() }, enabled = rich.canRedo) {
+                        Icon(
+                            Icons.Default.Redo,
+                            "Redo",
+                            tint = if (rich.canRedo) AppColors.TextPrimary else AppColors.TextMuted
+                        )
+                    }
+                    Box(
+                        Modifier
+                            .padding(horizontal = 6.dp)
+                            .width(1.dp)
+                            .height(22.dp)
+                            .background(AppColors.Border)
+                    )
                     FormatToggle(
                         label = "B",
                         active = rich.isStyleActive(RichStyle.Bold),
@@ -246,6 +270,18 @@ fun EditEntryScreen(
                         onClick = { requirePremium { rich.toggleStyle(RichStyle.Highlight) } }
                     ) {
                         Icon(Icons.Default.FormatColorText, null, tint = it, modifier = Modifier.size(20.dp))
+                    }
+                    IconButton(onClick = { rich.setAlignment(TextAlign.Start) }) {
+                        Icon(Icons.Default.FormatAlignLeft, "Align left", tint = AppColors.TextPrimary)
+                    }
+                    IconButton(onClick = { rich.setAlignment(TextAlign.Center) }) {
+                        Icon(Icons.Default.FormatAlignCenter, "Align center", tint = AppColors.TextPrimary)
+                    }
+                    IconButton(onClick = { rich.setAlignment(TextAlign.End) }) {
+                        Icon(Icons.Default.FormatAlignRight, "Align right", tint = AppColors.TextPrimary)
+                    }
+                    IconButton(onClick = { rich.setAlignment(TextAlign.Justify) }) {
+                        Icon(Icons.Default.FormatAlignJustify, "Justify", tint = AppColors.TextPrimary)
                     }
                     if (!isPremium) {
                         TextButton(onClick = { showPremiumDialog = true }) {

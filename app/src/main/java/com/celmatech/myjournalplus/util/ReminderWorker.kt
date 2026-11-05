@@ -8,7 +8,6 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.celmatech.myjournalplus.data.local.UserPrefs
 import kotlinx.coroutines.flow.first
-import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
 /**
@@ -22,21 +21,11 @@ class ReminderWorker(
 
     override suspend fun doWork(): Result {
         return try {
-            val prefs = UserPrefs(applicationContext)
+            val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
+            val prefs = UserPrefs(applicationContext, uid)
             if (!prefs.reminderEnabled.first()) return Result.success()
             val hour = prefs.reminderHour.first()
             val minute = prefs.reminderMinute.first()
-            val now = Calendar.getInstance()
-            // Fire notification if we're within 30 minutes after scheduled time
-            val scheduled = Calendar.getInstance().apply {
-                set(Calendar.HOUR_OF_DAY, hour)
-                set(Calendar.MINUTE, minute)
-                set(Calendar.SECOND, 0)
-            }
-            val diff = now.timeInMillis - scheduled.timeInMillis
-            if (diff in 0..(30 * 60 * 1000L)) {
-                ReminderReceiver.showNotification(applicationContext)
-            }
             // Always re-arm AlarmManager for precision
             ReminderScheduler.scheduleDaily(applicationContext, hour, minute)
             Result.success()

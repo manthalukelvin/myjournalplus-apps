@@ -9,10 +9,18 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.tasks.await
 
 private val Context.dataStore by preferencesDataStore("mj_prefs")
 
-class UserPrefs(private val context: Context) {
+class UserPrefs(
+    private val context: Context,
+    private val accountUid: String = ""
+) {
+    private val cloudSettings = if (accountUid.isBlank()) null else
+        FirebaseFirestore.getInstance().collection("users").document(accountUid)
+            .collection("settings").document("preferences")
     companion object {
         val THEME = stringPreferencesKey("theme_id")
         val PIN_HASH = stringPreferencesKey("pin_hash")
@@ -29,14 +37,27 @@ class UserPrefs(private val context: Context) {
         const val PIN_TRIAL_MS = PIN_TRIAL_DAYS * 24 * 60 * 60 * 1000
     }
 
-    val themeId: Flow<String> = context.dataStore.data.map { it[THEME] ?: "default" }
-    val pinEnabled: Flow<Boolean> = context.dataStore.data.map { it[PIN_ENABLED] ?: false }
-    val pinHash: Flow<String?> = context.dataStore.data.map { it[PIN_HASH] }
-    val pinTimeoutMin: Flow<Int> = context.dataStore.data.map { it[PIN_TIMEOUT_MIN] ?: 0 }
-    val pinTrialStartMs: Flow<Long> = context.dataStore.data.map { it[PIN_TRIAL_START_MS] ?: 0L }
-    val reminderEnabled: Flow<Boolean> = context.dataStore.data.map { it[REMINDER_ENABLED] ?: true }
-    val reminderHour: Flow<Int> = context.dataStore.data.map { it[REMINDER_HOUR] ?: 18 }
-    val reminderMinute: Flow<Int> = context.dataStore.data.map { it[REMINDER_MINUTE] ?: 0 }
+    private fun scoped(name: String) = stringPreferencesKey(
+        if (accountUid.isBlank()) name else "account_${accountUid}_$name"
+    )
+    private fun scopedBool(name: String) = booleanPreferencesKey(
+        if (accountUid.isBlank()) name else "account_${accountUid}_$name"
+    )
+    private fun scopedInt(name: String) = intPreferencesKey(
+        if (accountUid.isBlank()) name else "account_${accountUid}_$name"
+    )
+    private fun scopedLong(name: String) = longPreferencesKey(
+        if (accountUid.isBlank()) name else "account_${accountUid}_$name"
+    )
+
+    val themeId: Flow<String> = context.dataStore.data.map { it[scoped("theme_id")] ?: it[THEME] ?: "default" }
+    val pinEnabled: Flow<Boolean> = context.dataStore.data.map { it[scopedBool("pin_enabled")] ?: it[PIN_ENABLED] ?: false }
+    val pinHash: Flow<String?> = context.dataStore.data.map { it[scoped("pin_hash")] ?: it[PIN_HASH] }
+    val pinTimeoutMin: Flow<Int> = context.dataStore.data.map { it[scopedInt("pin_timeout_min")] ?: it[PIN_TIMEOUT_MIN] ?: 0 }
+    val pinTrialStartMs: Flow<Long> = context.dataStore.data.map { it[scopedLong("pin_trial_start_ms")] ?: it[PIN_TRIAL_START_MS] ?: 0L }
+    val reminderEnabled: Flow<Boolean> = context.dataStore.data.map { it[scopedBool("reminder_enabled")] ?: it[REMINDER_ENABLED] ?: true }
+    val reminderHour: Flow<Int> = context.dataStore.data.map { it[scopedInt("reminder_hour")] ?: it[REMINDER_HOUR] ?: 18 }
+    val reminderMinute: Flow<Int> = context.dataStore.data.map { it[scopedInt("reminder_minute")] ?: it[REMINDER_MINUTE] ?: 0 }
 
     /**
      * PIN is available for free during the 14-day trial (from first enable).
@@ -54,38 +75,78 @@ class UserPrefs(private val context: Context) {
         return (remaining / (24 * 60 * 60 * 1000)).toInt().coerceAtLeast(0)
     }
 
-    suspend fun setTheme(id: String) { context.dataStore.edit { it[THEME] = id } }
+    suspend fun setTheme(id: String) {
+        context.dataStore.edit { it[scoped("theme_id")] = id }
+        persistCloud(mapOf("theme" to id))
+    }
 
     suspend fun setPin(enabled: Boolean, hash: String?) {
         context.dataStore.edit {
-            it[PIN_ENABLED] = enabled
-            if (hash != null) it[PIN_HASH] = hash else it.remove(PIN_HASH)
+            it[scopedBool("pin_enabled")] = enabled
+            if (hash != null) it[scoped("pin_hash")] = hash else it.remove(scoped("pin_hash"))
             // Start trial clock on first enable
-            if (enabled && it[PIN_TRIAL_START_MS] == null) {
-                it[PIN_TRIAL_START_MS] = System.currentTimeMillis()
+            if (enabled && it[scopedLong("pin_trial_start_ms")] == null) {
+                it[scopedLong("pin_trial_start_ms")] = System.currentTimeMillis()
             }
         }
+        persistCloud(mapOf("pinEnabled" to enabled, "pinHash" to hash))
     }
 
-    suspend fun setPinTimeout(min: Int) { context.dataStore.edit { it[PIN_TIMEOUT_MIN] = min } }
+    suspend fun setPinTimeout(min: Int) {
+        context.dataStore.edit { it[scopedInt("pin_timeout_min")] = min }
+        persistCloud(mapOf("pinTimeoutMin" to min))
+    }
 
     suspend fun setPinHash(hash: String) {
-        context.dataStore.edit { it[PIN_HASH] = hash }
+        context.dataStore.edit { it[scoped("pin_hash")] = hash }
+        persistCloud(mapOf("pinHash" to hash))
     }
 
     suspend fun setReminder(enabled: Boolean, hour: Int, minute: Int) {
         context.dataStore.edit {
-            it[REMINDER_ENABLED] = enabled
-            it[REMINDER_HOUR] = hour
-            it[REMINDER_MINUTE] = minute
+            it[scopedBool("reminder_enabled")] = enabled
+            it[scopedInt("reminder_hour")] = hour
+            it[scopedInt("reminder_minute")] = minute
         }
+        persistCloud(
+            mapOf(
+                "reminderEnabled" to enabled,
+                "reminderHour" to hour,
+                "reminderMinute" to minute
+            )
+        )
     }
 
     suspend fun markUnlocked() {
-        context.dataStore.edit { it[LAST_UNLOCK] = System.currentTimeMillis().toString() }
+        context.dataStore.edit { it[scoped("last_unlock_ms")] = System.currentTimeMillis().toString() }
     }
 
     val lastUnlockMs: Flow<Long> = context.dataStore.data.map {
-        it[LAST_UNLOCK]?.toLongOrNull() ?: 0L
+        (it[scoped("last_unlock_ms")] ?: it[LAST_UNLOCK])?.toLongOrNull() ?: 0L
+    }
+
+    suspend fun syncFromCloud() {
+        val snap = cloudSettings?.get()?.await() ?: return
+        val data = snap.data ?: return
+        context.dataStore.edit { prefs ->
+            (data["theme"] as? String)?.let { prefs[scoped("theme_id")] = it }
+            (data["pinEnabled"] as? Boolean)?.let { prefs[scopedBool("pin_enabled")] = it }
+            (data["pinHash"] as? String)?.let { prefs[scoped("pin_hash")] = it }
+            (data["pinTimeoutMin"] as? Number)?.let { prefs[scopedInt("pin_timeout_min")] = it.toInt() }
+            (data["reminderEnabled"] as? Boolean)?.let { prefs[scopedBool("reminder_enabled")] = it }
+            (data["reminderHour"] as? Number)?.let { prefs[scopedInt("reminder_hour")] = it.toInt() }
+            (data["reminderMinute"] as? Number)?.let { prefs[scopedInt("reminder_minute")] = it.toInt() }
+        }
+    }
+
+    private suspend fun persistCloud(values: Map<String, Any?>) {
+        try {
+            cloudSettings?.set(
+                values + ("updatedAt" to com.google.firebase.Timestamp.now()),
+                com.google.firebase.firestore.SetOptions.merge()
+            )?.await()
+        } catch (_: Exception) {
+            // Local DataStore remains authoritative while offline.
+        }
     }
 }

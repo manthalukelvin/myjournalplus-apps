@@ -19,7 +19,8 @@ class ReminderReceiver : BroadcastReceiver() {
         showNotification(context)
         // Reschedule next day
         runBlocking {
-            val prefs = UserPrefs(context)
+            val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
+            val prefs = UserPrefs(context, uid)
             if (prefs.reminderEnabled.first()) {
                 ReminderScheduler.scheduleDaily(
                     context,

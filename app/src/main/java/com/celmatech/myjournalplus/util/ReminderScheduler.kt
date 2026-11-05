@@ -5,22 +5,19 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import kotlinx.coroutines.flow.first
 import java.util.Calendar
 
 object ReminderScheduler {
     private const val REQ = 4001
-    private const val REQ_BACKUP = 4002
 
     fun scheduleDaily(context: Context, hour: Int, minute: Int) {
         val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val triggerAt = nextTriggerMillis(hour, minute)
 
         val primary = pending(context, REQ)
-        val backup = pending(context, REQ_BACKUP)
-
         // Cancel old
         try { am.cancel(primary) } catch (_: Exception) {}
-        try { am.cancel(backup) } catch (_: Exception) {}
 
         // Primary: setAlarmClock is most reliable (shows in system status, survives Doze better)
         try {
@@ -46,15 +43,6 @@ object ReminderScheduler {
             } catch (_: Exception) { }
         }
 
-        // Backup alarm +1 minute in case primary is delayed
-        try {
-            val backupAt = triggerAt + 60_000L
-            if (Build.VERSION.SDK_INT >= 23) {
-                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, backupAt, backup)
-            } else {
-                am.set(AlarmManager.RTC_WAKEUP, backupAt, backup)
-            }
-        } catch (_: Exception) { }
     }
 
     private fun nextTriggerMillis(hour: Int, minute: Int): Long {
@@ -83,14 +71,18 @@ object ReminderScheduler {
     fun cancel(context: Context) {
         val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         try { am.cancel(pending(context, REQ)) } catch (_: Exception) {}
-        try { am.cancel(pending(context, REQ_BACKUP)) } catch (_: Exception) {}
     }
 
     fun rescheduleFromPrefs(context: Context) {
-        // Best-effort: default 18:00 if prefs not read yet
-        try {
-            scheduleDaily(context, 18, 0)
-        } catch (_: Exception) { }
+        kotlinx.coroutines.runBlocking {
+            try {
+                val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
+                val prefs = com.celmatech.myjournalplus.data.local.UserPrefs(context, uid)
+                if (prefs.reminderEnabled.first()) {
+                    scheduleDaily(context, prefs.reminderHour.first(), prefs.reminderMinute.first())
+                }
+            } catch (_: Exception) { }
+        }
     }
 
 }

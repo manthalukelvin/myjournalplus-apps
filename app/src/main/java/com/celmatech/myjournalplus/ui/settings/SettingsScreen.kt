@@ -16,6 +16,9 @@ import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.os.Build
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,7 +54,7 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val prefs = remember { UserPrefs(context) }
+    val prefs = remember(profile?.uid) { UserPrefs(context, profile?.uid.orEmpty()) }
     val isPremium = profile?.isPremium == true
 
     var showLogoutConfirm by remember { mutableStateOf(false) }
@@ -75,6 +78,11 @@ fun SettingsScreen(
     val pinAllowed = prefs.isPinAllowed(isPremium, pinTrialStart)
     val pinDaysLeft = prefs.pinTrialDaysLeft(pinTrialStart)
     val themeId by prefs.themeId.collectAsState(initial = "default")
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (!granted) snack = "Notifications are disabled. Enable them in Android Settings to receive reminders."
+    }
 
     LaunchedEffect(snack) {
         snack?.let { snackHost.showSnackbar(it); snack = null }
@@ -159,6 +167,9 @@ fun SettingsScreen(
                             checked = reminderEnabled,
                             onCheckedChange = { en ->
                                 scope.launch {
+                                    if (en && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                        notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                                    }
                                     prefs.setReminder(en, reminderHour, reminderMinute)
                                     if (en) {
                                         ReminderScheduler.scheduleDaily(context, reminderHour, reminderMinute)
@@ -209,11 +220,11 @@ fun SettingsScreen(
             SettingsItem(Icons.Default.SystemUpdate, "Check for updates", "Latest version on the web") {
                 openUrl("https://myjournalplus.com/updates")
             }
-            SettingsItem(Icons.Default.Email, "Contact us", "admin@myjournalplus.com") {
+            SettingsItem(Icons.Default.Email, "Contact us", "support@myjournalplus.com") {
                 try {
-                    context.startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:admin@myjournalplus.com")))
+                    context.startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:support@myjournalplus.com")))
                 } catch (_: Exception) {
-                    openUrl("mailto:admin@myjournalplus.com")
+                    openUrl("mailto:support@myjournalplus.com")
                 }
             }
             SettingsItem(Icons.Default.Info, "About", "MyJournal+ 1.0.2 · Celma Tech") {

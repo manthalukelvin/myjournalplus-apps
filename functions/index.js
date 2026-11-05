@@ -35,15 +35,40 @@ exports.aiChat = onCall(
     const userSnap = await userRef.get();
     const user = userSnap.data() || {};
     const isPremium = user.isPremium === true;
-    const freeUsed = (user.aiFreeUsedCount || 0) >= 1;
+    const freeUsed = Number(user.aiFreeUsedCount || 0);
+    const pending = Number(user.aiFreePendingCount || 0);
 
-    if (!isPremium && freeUsed) {
+    if (!isPremium && freeUsed + pending >= 3) {
       throw new HttpsError(
         "resource-exhausted",
         "FREE_LIMIT_REACHED",
         { code: "FREE_LIMIT_REACHED", message: "Upgrade to Premium for unlimited AI chat" }
       );
     }
+    if (!isPremium) {
+      await db.runTransaction(async (tx) => {
+        const fresh = await tx.get(userRef);
+        const data = fresh.data() || {};
+        const used = Number(data.aiFreeUsedCount || 0);
+        const inFlight = Number(data.aiFreePendingCount || 0);
+        if (used + inFlight >= 3) {
+          throw new HttpsError("resource-exhausted", "FREE_LIMIT_REACHED");
+        }
+        tx.set(
+          userRef,
+          { aiFreePendingCount: admin.firestore.FieldValue.increment(1) },
+          { merge: true }
+        );
+      });
+    }
+    const releasePending = async () => {
+      if (!isPremium) {
+        await userRef.set(
+          { aiFreePendingCount: admin.firestore.FieldValue.increment(-1) },
+          { merge: true }
+        );
+      }
+    };
 
     // Load recent journal context (server-side — never trust client-only)
     const [entriesSnap, moodsSnap] = await Promise.all([
@@ -84,6 +109,7 @@ ${question}`;
 
     const key = GEMINI_API_KEY.value();
     if (!key) {
+      await releasePending();
       throw new HttpsError("failed-precondition", "AI is not configured on the server");
     }
 
@@ -99,11 +125,16 @@ ${question}`;
     const raw = await resp.json();
     if (!resp.ok) {
       const msg = raw?.error?.message || JSON.stringify(raw).slice(0, 180);
+      await releasePending();
       throw new HttpsError("internal", `AI error: ${msg}`);
     }
     const answer =
       raw?.candidates?.[0]?.content?.parts?.map((p) => p.text).join("") ||
-      "I could not generate a response. Please try again.";
+      "";
+    if (!answer.trim()) {
+      await releasePending();
+      throw new HttpsError("internal", "AI returned an empty response");
+    }
 
     // Persist chat + message pair
     const chatId = (request.data?.chatId || "").toString().trim() || null;
@@ -141,6 +172,7 @@ ${question}`;
         userRef,
         {
           aiFreeUsedCount: admin.firestore.FieldValue.increment(1),
+          aiFreePendingCount: admin.firestore.FieldValue.increment(-1),
           aiFreeUsedAt: admin.firestore.FieldValue.serverTimestamp(),
         },
         { merge: true }

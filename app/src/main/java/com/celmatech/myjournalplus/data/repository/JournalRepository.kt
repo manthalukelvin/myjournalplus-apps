@@ -73,6 +73,7 @@ class JournalRepository(
             "uid" to entry.uid,
             "title" to entry.title,
             "content" to entry.content,
+            "alignments" to entry.alignments,
             "mood" to entry.mood,
             "moodScore" to entry.moodScore,
             "tags" to entry.tags,
@@ -91,28 +92,11 @@ class JournalRepository(
         val ref = entriesRef(entry.uid).document(docId)
 
         return try {
-            // Offline persistence: set() completes when written to local cache (usually fast).
-            // Timeout only stops waiting — we must NOT issue a second write with a new id.
-            kotlinx.coroutines.withTimeout(3000L) {
-                if (entry.id.isBlank()) {
-                    ref.set(data).await()
-                } else {
-                    ref.set(data, com.google.firebase.firestore.SetOptions.merge()).await()
-                }
-            }
+            if (entry.id.isBlank()) ref.set(data).await()
+            else ref.set(data, com.google.firebase.firestore.SetOptions.merge()).await()
             Result.success(docId)
-        } catch (_: kotlinx.coroutines.TimeoutCancellationException) {
-            // First set() was already sent; queue may still finish. Re-set same id (idempotent).
-            try {
-                if (entry.id.isBlank()) ref.set(data) else ref.set(data, com.google.firebase.firestore.SetOptions.merge())
-            } catch (_: Exception) { }
-            Result.success(docId)
-        } catch (_: Exception) {
-            // Still queue one write under the same id so going online does not create a second entry
-            try {
-                if (entry.id.isBlank()) ref.set(data) else ref.set(data, com.google.firebase.firestore.SetOptions.merge())
-            } catch (_: Exception) { }
-            Result.success(docId)
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 

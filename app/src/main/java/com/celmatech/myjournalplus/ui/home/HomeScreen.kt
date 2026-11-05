@@ -525,7 +525,8 @@ fun EntryPreviewContent(
             Text(
                 text = MarkdownFormat.toAnnotated(
                     entry.content.ifBlank { "(No content)" },
-                    baseColor = Color(0xFF374151)
+                    baseColor = Color(0xFF374151),
+                    alignments = entry.alignments
                 ),
                 style = MaterialTheme.typography.bodyLarge,
                 lineHeight = 26.sp

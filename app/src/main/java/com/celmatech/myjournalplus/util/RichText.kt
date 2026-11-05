@@ -15,6 +15,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.sp
 
@@ -65,6 +66,17 @@ class RichTextState(
         private set
     var selection by mutableStateOf(TextRange.Zero)
     private var lastNonEmptySelection = TextRange.Zero
+    var alignments by mutableStateOf<Map<Int, TextAlign>>(emptyMap())
+        private set
+    private data class Snapshot(
+        val text: String,
+        val ranges: List<StyleRange>,
+        val selection: TextRange,
+        val alignments: Map<Int, TextAlign>
+    )
+    private val undoStack = ArrayDeque<Snapshot>()
+    private val redoStack = ArrayDeque<Snapshot>()
+    private var historyVersion by mutableStateOf(0)
 
     val textFieldValue: TextFieldValue
         get() = TextFieldValue(text, selection)
@@ -75,14 +87,57 @@ class RichTextState(
         ranges = parsed.second
         selection = TextRange(text.length)
         lastNonEmptySelection = TextRange.Zero
+        alignments = emptyMap()
     }
 
-    fun loadMarkdown(markdown: String) {
+    fun loadMarkdown(markdown: String, alignmentData: Map<String, String> = emptyMap()) {
         val parsed = MarkdownCodec.decode(markdown)
         text = parsed.first
         ranges = parsed.second
         selection = TextRange(text.length)
         lastNonEmptySelection = TextRange.Zero
+        alignments = alignmentData.mapNotNull { (key, value) ->
+            val index = key.toIntOrNull()
+            val alignment = runCatching { TextAlign(value.toInt()) }.getOrNull()
+            if (index != null && alignment != null) index to alignment else null
+        }.toMap()
+        undoStack.clear()
+        redoStack.clear()
+        touchHistory()
+    }
+
+    fun alignmentData(): Map<String, String> =
+        alignments.mapKeys { it.key.toString() }.mapValues { it.value.value.toString() }
+
+    val canUndo: Boolean get() = undoStack.isNotEmpty()
+    val canRedo: Boolean get() = redoStack.isNotEmpty()
+
+    fun undo() {
+        val previous = undoStack.removeLastOrNull() ?: return
+        redoStack.addLast(snapshot())
+        restore(previous)
+    }
+
+    fun redo() {
+        val next = redoStack.removeLastOrNull() ?: return
+        undoStack.addLast(snapshot())
+        restore(next)
+    }
+
+    fun alignmentForSelection(): TextAlign {
+        val lines = selectedLineIndexes()
+        return lines.firstOrNull()?.let { alignments[it] } ?: TextAlign.Start
+    }
+
+    fun setAlignment(alignment: TextAlign) {
+        val lines = selectedLineIndexes()
+        if (lines.isEmpty()) return
+        recordHistory()
+        alignments = alignments.toMutableMap().apply {
+            lines.forEach { this[it] = alignment }
+        }
+        redoStack.clear()
+        touchHistory()
     }
 
     /** Markdown string safe for Firestore (backward compatible). */
@@ -99,13 +154,17 @@ class RichTextState(
         val finalValue = continued ?: typedValue
         val newText = finalValue.text
         if (oldText != newText) {
+            recordHistory()
             ranges = adjustRanges(oldText, newText, ranges)
+            alignments = remapAlignments(oldText, newText, alignments)
+            redoStack.clear()
         }
         text = newText
         selection = finalValue.selection
         if (selection.min != selection.max) {
             lastNonEmptySelection = selection
         }
+        touchHistory()
     }
 
     fun toggleStyle(style: RichStyle) {
@@ -119,6 +178,7 @@ class RichTextState(
         if (s == e) {
             return
         }
+        recordHistory()
         val covering = ranges.filter { it.style == style && it.start <= s && it.end >= e }
         ranges = if (covering.isNotEmpty()) {
             // Remove style from selection
@@ -143,6 +203,8 @@ class RichTextState(
         // Preserve selection
         selection = TextRange(s, e)
         lastNonEmptySelection = selection
+        redoStack.clear()
+        touchHistory()
     }
 
     fun applyBullet() {
@@ -151,15 +213,19 @@ class RichTextState(
             if (it < 0) 0 else it + 1
         }
         if (text.startsWith("• ", lineStart) || text.startsWith("- ", lineStart)) return
+        recordHistory()
         val insert = "• "
         val newText = text.substring(0, lineStart) + insert + text.substring(lineStart)
         ranges = ranges.mapNotNull { it.shifted(insert.length, lineStart)?.clipped(newText.length) }
         text = newText
         selection = TextRange(selection.min + insert.length, selection.max + insert.length)
         lastNonEmptySelection = selection
+        redoStack.clear()
+        touchHistory()
     }
 
     fun applyNumbered() {
+        recordHistory()
         val pos = selection.min
         val lineStart = text.lastIndexOf('\n', (pos - 1).coerceAtLeast(0)).let {
             if (it < 0) 0 else it + 1
@@ -177,6 +243,57 @@ class RichTextState(
         text = newText
         selection = TextRange(selection.min + insert.length, selection.max + insert.length)
         lastNonEmptySelection = selection
+        redoStack.clear()
+        touchHistory()
+    }
+
+    private fun selectedLineIndexes(): Set<Int> {
+        val start = selection.min.coerceIn(0, text.length)
+        val end = selection.max.coerceIn(start, text.length)
+        val starts = buildList {
+            add(0)
+            text.forEachIndexed { index, c -> if (c == '\n') add(index + 1) }
+        }
+        return starts.mapIndexedNotNull { line, lineStart ->
+            val lineEnd = text.indexOf('\n', lineStart).let { if (it < 0) text.length else it }
+            if (start == end) {
+                if (start in lineStart..lineEnd) line else null
+            } else if (lineEnd >= start && lineStart <= end) {
+                line
+            } else null
+        }.toSet()
+    }
+
+    private fun snapshot() = Snapshot(text, ranges, selection, alignments)
+
+    private fun recordHistory() {
+        undoStack.addLast(snapshot())
+        if (undoStack.size > 100) undoStack.removeFirst()
+    }
+
+    private fun restore(snapshot: Snapshot) {
+        text = snapshot.text
+        ranges = snapshot.ranges
+        selection = snapshot.selection
+        alignments = snapshot.alignments
+        lastNonEmptySelection = if (selection.min < selection.max) selection else lastNonEmptySelection
+        touchHistory()
+    }
+
+    private fun touchHistory() {
+        historyVersion++
+    }
+
+    private fun remapAlignments(
+        oldText: String,
+        newText: String,
+        old: Map<Int, TextAlign>
+    ): Map<Int, TextAlign> {
+        val oldLines = oldText.split('\n')
+        val newLines = newText.split('\n')
+        return old.mapNotNull { (line, alignment) ->
+            if (line < newLines.size && line < oldLines.size) line to alignment else null
+        }.toMap()
     }
 
     private fun continueListIfNeeded(

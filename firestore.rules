@@ -1,0 +1,64 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function owner(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    match /users/{userId} {
+      allow create: if owner(userId)
+        && request.resource.data.isPremium == false
+        && request.resource.data.role == "user";
+      allow read: if owner(userId);
+      allow update: if owner(userId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "email", "username", "displayName", "firstName", "surname",
+          "gender", "age", "photoUrl", "moodEnabled", "fcmTokens",
+          "lastSeenAt", "updatedAt"
+        ]);
+      allow delete: if false;
+
+      match /entries/{entryId} {
+        allow read: if owner(userId);
+        allow create: if owner(userId)
+          && request.resource.data.uid == userId
+          && request.resource.data.keys().hasOnly([
+            "uid", "title", "content", "alignments", "mood", "moodScore",
+            "tags", "wordCount", "isFavorite", "createdAt", "updatedAt"
+          ]);
+        allow update: if owner(userId)
+          && request.resource.data.uid == userId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "uid", "title", "content", "alignments", "mood", "moodScore",
+            "tags", "wordCount", "isFavorite", "createdAt", "updatedAt"
+          ]);
+        allow delete: if owner(userId);
+      }
+
+      match /moods/{moodId} {
+        allow read, delete: if owner(userId);
+        allow create, update: if owner(userId)
+          && request.resource.data.uid == userId;
+      }
+
+      match /devices/{deviceId} {
+        allow read, write: if owner(userId);
+      }
+
+      match /settings/{settingId} {
+        allow read, write: if owner(userId);
+      }
+
+      match /aiChats/{chatId} {
+        allow read, write: if owner(userId);
+        match /messages/{messageId} {
+          allow read, write: if owner(userId);
+        }
+      }
+    }
+  }
+}

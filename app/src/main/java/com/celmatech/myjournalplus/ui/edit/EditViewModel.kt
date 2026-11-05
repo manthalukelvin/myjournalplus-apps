@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Edit ViewModel with reliable debounced autosave.
@@ -31,6 +33,7 @@ class EditViewModel(
     private var autosaveJob: Job? = null
     private var lastSavedTitle: String = ""
     private var lastSavedContent: String = ""
+    private var lastSavedAlignments: Map<String, String> = emptyMap()
     private var currentEntryId: String = ""
     private var currentUid: String = ""
 
@@ -41,6 +44,7 @@ class EditViewModel(
             currentEntryId = id
             lastSavedTitle = entry.title
             lastSavedContent = entry.content
+            lastSavedAlignments = entry.alignments
         }
         entry
     } catch (_: Exception) {
@@ -52,30 +56,37 @@ class EditViewModel(
         currentEntryId = ""
         lastSavedTitle = ""
         lastSavedContent = ""
+        lastSavedAlignments = emptyMap()
         _saveState.value = SaveState.Idle
     }
 
     /**
      * Debounced autosave (1.2s). Only writes when content actually changed.
      */
-    fun scheduleAutosave(title: String, content: String) {
+    fun scheduleAutosave(title: String, content: String, alignments: Map<String, String> = emptyMap()) {
         if (currentUid.isBlank()) return
-        if (title == lastSavedTitle && content == lastSavedContent) return
+        if (title == lastSavedTitle && content == lastSavedContent && alignments == lastSavedAlignments) return
         if (content.isBlank() && title.isBlank()) return
 
         autosaveJob?.cancel()
         autosaveJob = viewModelScope.launch {
             delay(1200)
-            performSave(title, content, isManual = false)
+            performSave(title, content, alignments)
         }
     }
 
     fun save(entry: JournalEntry, onDone: (Boolean, String?) -> Unit) {
         autosaveJob?.cancel()
+        if (entry.title == lastSavedTitle &&
+            entry.content == lastSavedContent &&
+            entry.alignments == lastSavedAlignments
+        ) {
+            _saveState.value = SaveState.Saved
+            onDone(true, null)
+            return
+        }
         viewModelScope.launch {
-            val result = withContext(Dispatchers.IO) {
-                repo.saveEntry(entry)
-            }
+            val result = saveMutex.withLock { withContext(Dispatchers.IO) { repo.saveEntry(entry) } }
             result.fold(
                 onSuccess = { id ->
                     if (currentEntryId.isBlank() && id.isNotBlank()) {
@@ -83,57 +94,60 @@ class EditViewModel(
                     }
                     lastSavedTitle = entry.title
                     lastSavedContent = entry.content
+                    lastSavedAlignments = entry.alignments
                     _saveState.value = SaveState.Saved
                     onDone(true, null)
                 },
-                onFailure = {
-                    // Offline persistence still queues the write
-                    lastSavedTitle = entry.title
-                    lastSavedContent = entry.content
-                    _saveState.value = SaveState.Saved
-                    onDone(true, "Saved locally — will sync when online")
+                onFailure = { error ->
+                    _saveState.value = SaveState.Error
+                    onDone(false, error.message ?: "Save failed")
                 }
             )
         }
     }
 
-    private suspend fun performSave(title: String, content: String, isManual: Boolean) {
+    private val saveMutex = Mutex()
+
+    private suspend fun performSave(
+        title: String,
+        content: String,
+        alignments: Map<String, String> = emptyMap()
+    ) {
         if (currentUid.isBlank()) return
-        _saveState.value = SaveState.Saving
-        val entry = JournalEntry(
-            id = currentEntryId,
-            uid = currentUid,
-            title = title,
-            content = content
-        )
-        val result = withContext(Dispatchers.IO) {
-            repo.saveEntry(entry)
+        saveMutex.withLock {
+            if (title == lastSavedTitle &&
+                content == lastSavedContent &&
+                alignments == lastSavedAlignments
+            ) return
+            _saveState.value = SaveState.Saving
+            val entry = JournalEntry(
+                id = currentEntryId,
+                uid = currentUid,
+                title = title,
+                content = content,
+                alignments = alignments
+            )
+            val result = withContext(Dispatchers.IO) { repo.saveEntry(entry) }
+            result.fold(
+                onSuccess = { id ->
+                    if (currentEntryId.isBlank() && id.isNotBlank()) currentEntryId = id
+                    lastSavedTitle = title
+                    lastSavedContent = content
+                    lastSavedAlignments = alignments
+                    _saveState.value = SaveState.Saved
+                },
+                onFailure = { _saveState.value = SaveState.Error }
+            )
         }
-        result.fold(
-            onSuccess = { id ->
-                if (currentEntryId.isBlank() && id.isNotBlank()) {
-                    currentEntryId = id
-                }
-                lastSavedTitle = title
-                lastSavedContent = content
-                _saveState.value = SaveState.Saved
-            },
-            onFailure = {
-                // Treat offline as success for UX
-                lastSavedTitle = title
-                lastSavedContent = content
-                _saveState.value = SaveState.Saved
-            }
-        )
     }
 
     /** Flush any pending autosave (e.g. on navigate away / background). */
-    fun flushPending(title: String, content: String) {
+    fun flushPending(title: String, content: String, alignments: Map<String, String> = emptyMap()) {
         autosaveJob?.cancel()
-        if (title == lastSavedTitle && content == lastSavedContent) return
+        if (title == lastSavedTitle && content == lastSavedContent && alignments == lastSavedAlignments) return
         if (content.isBlank() && title.isBlank()) return
         viewModelScope.launch {
-            performSave(title, content, isManual = false)
+            performSave(title, content, alignments)
         }
     }
 

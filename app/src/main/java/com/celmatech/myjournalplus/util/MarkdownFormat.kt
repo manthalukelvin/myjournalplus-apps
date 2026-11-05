@@ -11,6 +11,8 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.ParagraphStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 
 /**
@@ -27,7 +29,11 @@ object MarkdownFormat {
     private val Accent = Color(0xFF7B6CFF)
 
     /** Preview — markers removed, styles applied. */
-    fun toAnnotated(raw: String, baseColor: Color = Color(0xFF374151)): AnnotatedString {
+    fun toAnnotated(
+        raw: String,
+        baseColor: Color = Color(0xFF374151),
+        alignments: Map<String, String> = emptyMap()
+    ): AnnotatedString {
         if (raw.isBlank()) return AnnotatedString("(No content)")
         val (plain, ranges) = MarkdownCodec.decode(raw)
         val len = plain.length
@@ -58,7 +64,16 @@ object MarkdownFormat {
                     },
                     background = if (RichStyle.Highlight in active) Color(0x337B6CFF) else Color.Unspecified
                 )
-                withStyle(span) { append(plain.substring(index, end)) }
+                val line = plain.substring(0, index).count { it == '\n' }
+                val paragraphAlignment = alignments[line.toString()]?.toIntOrNull()
+                    ?.let { runCatching { TextAlign(it) }.getOrNull() }
+                if (paragraphAlignment != null) {
+                    withStyle(ParagraphStyle(textAlign = paragraphAlignment)) {
+                        withStyle(span) { append(plain.substring(index, end)) }
+                    }
+                } else {
+                    withStyle(span) { append(plain.substring(index, end)) }
+                }
                 index = end
             }
         }

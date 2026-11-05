@@ -31,6 +31,7 @@ data class JournalEntry(
     val uid: String = "",
     val title: String = "",
     val content: String = "",
+    val alignments: Map<String, String> = emptyMap(),
     val mood: String? = null,
     val moodScore: Int? = null,
     val tags: List<String> = emptyList(),

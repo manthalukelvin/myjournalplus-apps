@@ -49,7 +49,7 @@ try {
 
 const db = admin.firestore();
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || "gemini-2.0-flash" });
 
 async function verifyToken(req) {
   const auth = req.headers.authorization || "";
@@ -89,20 +89,35 @@ app.post("/ai-chat", async (req, res) => {
     }
 
     const userRef = db.collection("users").doc(uid);
-    const userSnap = await userRef.get();
-    const userData = userSnap.exists ? userSnap.data() : {};
-    const isPremium = !!userData.isPremium;
-    let freeUsedCount = Number(userData.aiFreeUsedCount || 0);
-
-    if (!isPremium && freeUsedCount >= FREE_LIMIT) {
+    const reservation = await db.runTransaction(async (tx) => {
+      const snap = await tx.get(userRef);
+      const data = snap.exists ? snap.data() : {};
+      const isPremium = data.isPremium === true;
+      const used = Number(data.aiFreeUsedCount || 0);
+      const pending = Number(data.aiFreePendingCount || 0);
+      if (!isPremium && used + pending >= FREE_LIMIT) {
+        return { allowed: false, isPremium, used };
+      }
+      if (!isPremium) {
+        tx.set(
+          userRef,
+          { aiFreePendingCount: admin.firestore.FieldValue.increment(1) },
+          { merge: true }
+        );
+      }
+      return { allowed: true, isPremium, used };
+    });
+    if (!reservation.allowed) {
       return res.status(402).json({
         error: "FREE_LIMIT",
         freeLimitReached: true,
         isPremium: false,
-        freeUsedCount,
+        freeUsedCount: reservation.used,
         message: `Free limit of ${FREE_LIMIT} AI questions reached. Upgrade to Premium.`
       });
     }
+    const isPremium = reservation.isPremium;
+    let freeUsedCount = reservation.used;
 
     // Call Gemini
     const systemHint =
@@ -110,14 +125,34 @@ app.post("/ai-chat", async (req, res) => {
       "Give empathetic, practical insights. Keep answers under 300 words unless asked for more. " +
       "Do not mention you are an AI model unless asked.";
     const prompt = `${systemHint}\n\nUser: ${question}`;
-    const result = await model.generateContent(prompt);
-    const answer = result.response?.text?.() || "I could not generate a response right now.";
+    let answer;
+    try {
+      const result = await Promise.race([
+        model.generateContent(prompt),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("AI generation timed out")), 45_000)
+        )
+      ]);
+      answer = result.response?.text?.()?.trim();
+      if (!answer) throw new Error("AI returned an empty response");
+    } catch (generationError) {
+      if (!isPremium) {
+        await userRef.set(
+          { aiFreePendingCount: admin.firestore.FieldValue.increment(-1) },
+          { merge: true }
+        );
+      }
+      throw generationError;
+    }
 
-    // Increment free counter ONLY after a successful generation (strict)
     if (!isPremium) {
       freeUsedCount += 1;
       await userRef.set(
-        { aiFreeUsedCount: freeUsedCount, lastAiAt: admin.firestore.FieldValue.serverTimestamp() },
+        {
+          aiFreeUsedCount: freeUsedCount,
+          aiFreePendingCount: admin.firestore.FieldValue.increment(-1),
+          lastAiAt: admin.firestore.FieldValue.serverTimestamp()
+        },
         { merge: true }
       );
     }
