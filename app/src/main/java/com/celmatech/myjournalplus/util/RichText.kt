@@ -98,8 +98,8 @@ class RichTextState(
         lastNonEmptySelection = TextRange.Zero
         alignments = alignmentData.mapNotNull { (key, value) ->
             val index = key.toIntOrNull()
-            val alignment = decodeAlignment(value)
-            if (index != null && alignment != null) index to alignment else null
+            val decoded = decodeAlignment(value)
+            if (index == null || decoded == null) null else Pair(index, decoded)
         }.toMap()
         undoStack.clear()
         redoStack.clear()
@@ -136,24 +136,24 @@ class RichTextState(
         alignments = alignments.toMutableMap().apply {
             lines.forEach { this[it] = alignment }
         }
-
-        private fun encodeAlignment(alignment: TextAlign): String = when (alignment) {
-            TextAlign.Start -> "start"
-            TextAlign.Center -> "center"
-            TextAlign.End -> "end"
-            TextAlign.Justify -> "justify"
-            else -> "start"
-        }
-
-        private fun decodeAlignment(value: String): TextAlign? = when (value.lowercase()) {
-            "start", "left" -> TextAlign.Start
-            "center" -> TextAlign.Center
-            "end", "right" -> TextAlign.End
-            "justify" -> TextAlign.Justify
-            else -> null
-        }
         redoStack.clear()
         touchHistory()
+    }
+
+    private fun encodeAlignment(alignment: TextAlign): String = when (alignment) {
+        TextAlign.Start -> "start"
+        TextAlign.Center -> "center"
+        TextAlign.End -> "end"
+        TextAlign.Justify -> "justify"
+        else -> "start"
+    }
+
+    private fun decodeAlignment(value: String): TextAlign? = when (value.lowercase()) {
+        "start", "left" -> TextAlign.Start
+        "center" -> TextAlign.Center
+        "end", "right" -> TextAlign.End
+        "justify" -> TextAlign.Justify
+        else -> null
     }
 
     /** Markdown string safe for Firestore (backward compatible). */
