@@ -283,6 +283,7 @@ private fun PinLockScreen(
     Box(
         Modifier
             .fillMaxSize()
+            .imePadding()
             .background(Color(0xFF12101A))
             .pointerInput(Unit) { /* consume everything */ },
         contentAlignment = Alignment.Center

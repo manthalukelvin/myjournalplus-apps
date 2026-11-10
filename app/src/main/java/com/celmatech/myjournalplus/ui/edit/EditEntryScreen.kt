@@ -167,7 +167,6 @@ fun EditEntryScreen(
             Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .imePadding()
         ) {
             // Formatting toolbar — toggles real styles on selection
             Surface(color = Color.White, shadowElevation = 1.dp) {
@@ -308,39 +307,41 @@ fun EditEntryScreen(
                     .fillMaxWidth()
                     .background(Color.White)
             ) {
-                BasicTextField(
-                    value = bodyValue,
-                    onValueChange = { rich.onValueChange(it) },
-                    textStyle = TextStyle(
-                        color = AppColors.TextPrimary,
-                        fontSize = 17.sp,
-                        lineHeight = 26.sp
-                    ),
-                    cursorBrush = SolidColor(AppColors.Primary),
-                    keyboardOptions = KeyboardOptions(
-                        capitalization = KeyboardCapitalization.Sentences
-                    ),
-                    visualTransformation = rich.visualTransformation(AppColors.TextPrimary),
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 20.dp, vertical = 14.dp)
-                        .focusRequester(bodyFocus),
-                    decorationBox = { inner ->
-                        Box(Modifier.fillMaxSize()) {
-                            if (bodyValue.text.isEmpty()) {
-                                Text(
-                                    "Write your thoughts…",
-                                    style = TextStyle(
-                                        color = AppColors.TextMuted,
-                                        fontSize = 17.sp,
-                                        lineHeight = 26.sp
+                Box(Modifier.fillMaxSize().imePadding()) {
+                    BasicTextField(
+                        value = bodyValue,
+                        onValueChange = { rich.onValueChange(it) },
+                        textStyle = TextStyle(
+                            color = AppColors.TextPrimary,
+                            fontSize = 17.sp,
+                            lineHeight = 26.sp
+                        ),
+                        cursorBrush = SolidColor(AppColors.Primary),
+                        keyboardOptions = KeyboardOptions(
+                            capitalization = KeyboardCapitalization.Sentences
+                        ),
+                        visualTransformation = rich.visualTransformation(AppColors.TextPrimary),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 20.dp, vertical = 14.dp)
+                            .focusRequester(bodyFocus),
+                        decorationBox = { inner ->
+                            Box(Modifier.fillMaxSize()) {
+                                if (bodyValue.text.isEmpty()) {
+                                    Text(
+                                        "Write your thoughts…",
+                                        style = TextStyle(
+                                            color = AppColors.TextMuted,
+                                            fontSize = 17.sp,
+                                            lineHeight = 26.sp
+                                        )
                                     )
-                                )
+                                }
+                                inner()
                             }
-                            inner()
                         }
-                    }
-                )
+                    )
+                }
             }
 
             Surface(color = Color.White, shadowElevation = 2.dp) {
