@@ -71,7 +71,7 @@ class MainActivity : ComponentActivity() {
             var accountUid by remember { mutableStateOf(auth.currentUser?.uid.orEmpty()) }
             val notificationPermissionLauncher = rememberLauncherForActivityResult(
                 ActivityResultContracts.RequestPermission()
-            )
+            ) {}
             DisposableEffect(auth) {
                 val listener = FirebaseAuth.AuthStateListener {
                     accountUid = it.currentUser?.uid.orEmpty()
@@ -206,14 +206,13 @@ class MainActivity : ComponentActivity() {
                     NavGraph(initialOpen = openParam)
                 }
             }
-
-            override fun onNewIntent(intent: Intent) {
-                super.onNewIntent(intent)
-                setIntent(intent)
-                openRequest.value = intent.getStringExtra("open")
-                    ?: intent.data?.getQueryParameter("open")
-            }
         }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        openRequest.value = intent.getStringExtra("open")
+            ?: intent.data?.getQueryParameter("open")
     }
 }
 

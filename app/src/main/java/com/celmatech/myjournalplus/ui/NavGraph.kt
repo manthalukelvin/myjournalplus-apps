@@ -22,6 +22,7 @@ import com.celmatech.myjournalplus.ui.settings.SettingsScreen
 import com.celmatech.myjournalplus.data.repository.DeviceRepository
 import com.celmatech.myjournalplus.data.local.UserPrefs
 import com.celmatech.myjournalplus.util.ReminderScheduler
+import com.celmatech.myjournalplus.util.ReminderWorker
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
