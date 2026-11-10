@@ -20,7 +20,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -29,8 +28,6 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.celmatech.myjournalplus.data.model.JournalEntry
 import com.celmatech.myjournalplus.ui.components.PremiumUpgradeDialog
@@ -90,29 +87,7 @@ fun EditEntryScreen(
         }
     }
 
-    // Autosave markdown serialization
-    LaunchedEffect(title, bodyValue.text, rangesVersion) {
-        if (loaded) {
-            viewModel.scheduleAutosave(title, rich.toMarkdown(), alignmentData)
-        }
-    }
-
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
-                viewModel.flushPending(title, rich.toMarkdown(), alignmentData)
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-            viewModel.flushPending(title, rich.toMarkdown(), alignmentData)
-        }
-    }
-
     BackHandler {
-        viewModel.flushPending(title, rich.toMarkdown(), alignmentData)
         onBack()
     }
 
@@ -138,10 +113,7 @@ fun EditEntryScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = {
-                        viewModel.flushPending(title, rich.toMarkdown(), alignmentData)
-                        onBack()
-                    }) {
+                    IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = Color.White)
                     }
                 },

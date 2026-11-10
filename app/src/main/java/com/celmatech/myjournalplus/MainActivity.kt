@@ -1,9 +1,15 @@
 package com.celmatech.myjournalplus
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.celmatech.myjournalplus.data.local.UserPrefs
@@ -50,14 +57,21 @@ import javax.crypto.spec.PBEKeySpec
 class MainActivity : ComponentActivity() {
 
     private var lastPausedAt: Long = 0L
+    private val openRequest = mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        openRequest.value = savedInstanceState?.getString("open")
+            ?: intent?.getStringExtra("open")
+            ?: intent?.data?.getQueryParameter("open")
         enableEdgeToEdge()
         setContent {
             val context = LocalContext.current
             val auth = remember { FirebaseAuth.getInstance() }
             var accountUid by remember { mutableStateOf(auth.currentUser?.uid.orEmpty()) }
+            val notificationPermissionLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.RequestPermission()
+            )
             DisposableEffect(auth) {
                 val listener = FirebaseAuth.AuthStateListener {
                     accountUid = it.currentUser?.uid.orEmpty()
@@ -77,6 +91,19 @@ class MainActivity : ComponentActivity() {
             val pinTimeout by prefs.pinTimeoutMin.collectAsState(initial = 0)
             val lastUnlock by prefs.lastUnlockMs.collectAsState(initial = 0L)
             val scope = rememberCoroutineScope()
+
+            LaunchedEffect(accountUid) {
+                if (
+                    accountUid.isNotBlank() &&
+                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.POST_NOTIFICATIONS
+                    ) != PackageManager.PERMISSION_GRANTED
+                ) {
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }
 
             var locked by remember { mutableStateOf(false) }
             var pinInput by remember { mutableStateOf("") }
@@ -124,8 +151,7 @@ class MainActivity : ComponentActivity() {
                 onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
             }
 
-            val openParam = intent?.getStringExtra("open")
-                ?: intent?.data?.getQueryParameter("open")
+            val openParam by openRequest
 
             MyJournalPlusTheme(themeId = themeId) {
                 // CRITICAL: When locked, do NOT compose NavGraph at all.
@@ -179,6 +205,13 @@ class MainActivity : ComponentActivity() {
                 } else {
                     NavGraph(initialOpen = openParam)
                 }
+            }
+
+            override fun onNewIntent(intent: Intent) {
+                super.onNewIntent(intent)
+                setIntent(intent)
+                openRequest.value = intent.getStringExtra("open")
+                    ?: intent.data?.getQueryParameter("open")
             }
         }
     }

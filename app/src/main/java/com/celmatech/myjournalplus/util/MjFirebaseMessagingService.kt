@@ -1,10 +1,8 @@
 package com.celmatech.myjournalplus.util
 
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
-import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.celmatech.myjournalplus.MainActivity
 import com.celmatech.myjournalplus.R
@@ -42,13 +40,9 @@ class MjFirebaseMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
         val title = message.notification?.title ?: message.data["title"] ?: "MyJournal+"
         val body = message.notification?.body ?: message.data["body"] ?: ""
-        val channelId = "mj_admin"
+        val channelId = NotificationChannels.ADMIN
+        NotificationChannels.createAll(this)
         val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            nm.createNotificationChannel(
-                NotificationChannel(channelId, "Announcements", NotificationManager.IMPORTANCE_DEFAULT)
-            )
-        }
         val open = message.data["open"]
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP

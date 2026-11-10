@@ -5,7 +5,6 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import kotlinx.coroutines.flow.first
 import java.util.Calendar
 
 object ReminderScheduler {
@@ -21,13 +20,16 @@ object ReminderScheduler {
 
         // Primary: setAlarmClock is most reliable (shows in system status, survives Doze better)
         try {
-            if (Build.VERSION.SDK_INT >= 21) {
+            val canScheduleExact = Build.VERSION.SDK_INT < 31 || am.canScheduleExactAlarms()
+            if (Build.VERSION.SDK_INT >= 21 && canScheduleExact) {
                 val show = PendingIntent.getActivity(
                     context, 0,
                     Intent(context, com.celmatech.myjournalplus.MainActivity::class.java),
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
                 am.setAlarmClock(AlarmManager.AlarmClockInfo(triggerAt, show), primary)
+            } else if (Build.VERSION.SDK_INT >= 23) {
+                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, primary)
             } else {
                 am.setExact(AlarmManager.RTC_WAKEUP, triggerAt, primary)
             }

@@ -134,6 +134,10 @@ fun NavGraph(
                                 prefs.reminderHour.first(),
                                 prefs.reminderMinute.first()
                             )
+                            ReminderWorker.enqueue(context)
+                        } else {
+                            ReminderScheduler.cancel(context)
+                            ReminderWorker.cancel(context)
                         }
                     } catch (_: Exception) { }
                     // Remote logout from another device

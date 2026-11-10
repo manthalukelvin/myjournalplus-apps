@@ -17,6 +17,7 @@
     <string name="logout">Logout</string>
     <string name="upgrade_to_premium">Upgrade to Premium</string>
     <string name="premium_badge">✦ Premium</string>
+    <string name="fcm_notification_channel_id">mj_admin</string>
     <!-- Replace with the Web client ID from Firebase Console → Project settings → Your apps → Web client (auto-created) -->
     <string name="default_web_client_id">288260274583-uee5b6u6u0pbvg503sos2s6l2sf0l4or.apps.googleusercontent.com</string>
 </resources>
